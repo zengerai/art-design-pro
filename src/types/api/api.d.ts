@@ -164,6 +164,69 @@ declare namespace Api {
       enabled: boolean
       dashboardPath?: string
     }
+
+    /** 日志审计列表项 */
+    interface LogAuditItem {
+      id: number
+      userId: number
+      userName: string
+      action: string
+      module: string
+      ip: string
+      userAgent: string
+      createTime: string
+      details?: string
+    }
+
+    /** 日志审计列表 */
+    type LogAuditList = Api.Common.PaginatedResponse<LogAuditItem>
+
+    /** 日志审计搜索参数 */
+    type LogAuditSearchParams = Partial<
+      Pick<LogAuditItem, 'userId' | 'userName' | 'action' | 'module'> &
+        Api.Common.CommonSearchParams
+    >
+  }
+
+  /** 日志审计类型 */
+  namespace LogAudit {
+    /** 操作类型 */
+    type OperationType =
+      | 'CREATE'
+      | 'UPDATE'
+      | 'DELETE'
+      | 'LOGIN'
+      | 'LOGOUT'
+      | 'QUERY'
+      | 'EXPORT'
+      | 'IMPORT'
+
+    /** 日志列表项 */
+    interface LogListItem {
+      id: number
+      userId: number
+      userName: string
+      action: string
+      module: string
+      operationType: OperationType
+      ip: string
+      userAgent: string
+      createTime: string
+      details?: string
+      requestData?: string
+      responseData?: string
+    }
+
+    /** 日志列表 */
+    type LogList = Api.Common.PaginatedResponse<LogListItem>
+
+    /** 日志搜索参数 */
+    type LogSearchParams = Partial<
+      Pick<LogListItem, 'userId' | 'userName' | 'action' | 'module' | 'operationType'> & {
+        startTime?: string
+        endTime?: string
+      } & Api.Common.CommonSearchParams
+    >
   }
 
   /** API文档类型 */

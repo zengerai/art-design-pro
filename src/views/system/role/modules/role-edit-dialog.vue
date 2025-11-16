@@ -89,7 +89,18 @@
   /**
    * 表单数据
    */
-  const form = reactive<Partial<RoleListItem> & { dashboardPath?: string }>({
+  interface FormData {
+    roleId: number
+    roleName: string
+    roleCode: string
+    description: string
+    dashboardPath: string
+    createTime: string
+    updateTime: string
+    enabled: boolean
+  }
+
+  const form = reactive<FormData>({
     roleId: 0,
     roleName: '',
     roleCode: '',

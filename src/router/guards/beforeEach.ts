@@ -46,7 +46,6 @@ import { setPageTitle } from '@/utils/router'
 import { RoutesAlias } from '../routesAlias'
 import { staticRoutes } from '../routes/staticRoutes'
 import { loadingService } from '@/utils/ui'
-import { useCommon } from '@/hooks/core/useCommon'
 import { useHomePath } from '@/hooks/core/useHomePath'
 import { useWorktabStore } from '@/store/modules/worktab'
 import { fetchGetUserInfo } from '@/api/auth'
@@ -244,7 +243,7 @@ async function handleDynamicRoutes(
     useWorktabStore().validateWorktabs(router)
 
     // 8. 验证目标路径权限
-    const { homePath } = useCommon()
+    const { homePath } = useHomePath()
     const { path: validatedPath, hasPermission } = RoutePermissionValidator.validatePath(
       to.path,
       menuList,
