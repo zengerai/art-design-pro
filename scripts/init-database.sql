@@ -26,14 +26,14 @@ CREATE TABLE roles (
   role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码，唯一',
   dashboard_path VARCHAR(200) NOT NULL COMMENT '登录后跳转的控制台路径',
   description VARCHAR(200) DEFAULT NULL COMMENT '角色描述',
-  status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-启用，0-禁用',
+  enabled TINYINT DEFAULT 1 COMMENT '启用状态：1-启用，0-禁用',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   INDEX idx_role_code (role_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='角色表';
 
 -- 插入预置角色数据
-INSERT INTO roles (id, role_name, role_code, dashboard_path, description, status) VALUES 
+INSERT INTO roles (id, role_name, role_code, dashboard_path, description, enabled) VALUES 
 (1, '系统后台管理员', 'R_SUPER', '/system/dashboard/console', '超级管理员，拥有所有权限', 1),
 (2, '系统管理员', 'R_ADMIN', '/user/dashboard/console', '系统管理员', 1),
 (3, '系统用户', 'R_USER', '/user/dashboard/console', '普通用户', 1);
@@ -50,30 +50,31 @@ CREATE TABLE users (
   real_name VARCHAR(50) DEFAULT NULL COMMENT '真实姓名',
   nickname VARCHAR(50) DEFAULT NULL COMMENT '昵称',
   avatar VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
-  sex TINYINT DEFAULT NULL COMMENT '性别：1-男，2-女',
+  gender TINYINT DEFAULT NULL COMMENT '性别：1-男，2-女',
   email VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
-  mobile VARCHAR(20) DEFAULT NULL COMMENT '手机号',
+  phone VARCHAR(20) DEFAULT NULL COMMENT '手机号',
   address VARCHAR(200) DEFAULT NULL COMMENT '地址',
   description VARCHAR(500) DEFAULT NULL COMMENT '个人介绍',
   role_id INT NOT NULL DEFAULT 3 COMMENT '角色ID，关联角色表',
   status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-启用，0-禁用',
+  create_by INT DEFAULT NULL COMMENT '创建人ID',
+  update_by INT DEFAULT NULL COMMENT '更新人ID',
   last_login_time DATETIME DEFAULT NULL COMMENT '最后登录时间',
   last_login_ip VARCHAR(50) DEFAULT NULL COMMENT '最后登录IP',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间（自动更新）',
   INDEX idx_username (username),
   INDEX idx_role_id (role_id),
-  INDEX idx_mobile (mobile),
+  INDEX idx_phone (phone),
   FOREIGN KEY (role_id) REFERENCES roles(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户表';
 
 -- 插入测试用户数据
 -- 注意：密码为 bcrypt 加密后的 "123456"
--- 实际生产环境中，密码应该由后端使用 bcrypt 加密后再插入
-INSERT INTO users (username, password, real_name, nickname, role_id, status, email, mobile) VALUES 
-('Super', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', '超级管理员', 'Super', 1, 1, 'super@example.com', '13800000001'),
-('Admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', '系统管理员', 'Admin', 2, 1, 'admin@example.com', '13800000002'),
-('User', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', '普通用户', 'User', 3, 1, 'user@example.com', '13800000003');
+INSERT INTO users (username, password, real_name, nickname, role_id, status, email, phone) VALUES 
+('Super', '$2a$10$4VhhfMXEkawcV6X6p8urgeHnJkSVZAiCunBO44V81DNs5bjYGTYNG', '超级管理员', 'Super', 1, 1, 'super@example.com', '13800000001'),
+('Admin', '$2a$10$4VhhfMXEkawcV6X6p8urgeHnJkSVZAiCunBO44V81DNs5bjYGTYNG', '系统管理员', 'Admin', 2, 1, 'admin@example.com', '13800000002'),
+('User', '$2a$10$4VhhfMXEkawcV6X6p8urgeHnJkSVZAiCunBO44V81DNs5bjYGTYNG', '普通用户', 'User', 3, 1, 'user@example.com', '13800000003');
 
 -- ==========================================
 -- 4. 创建用户标签表 (user_tags)

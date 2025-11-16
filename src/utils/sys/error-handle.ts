@@ -50,6 +50,11 @@ export function scriptErrorHandler(
   colno?: number,
   error?: Error
 ): boolean {
+  // 过滤掉 ResizeObserver 良性警告
+  if (typeof message === 'string' && message.includes('ResizeObserver')) {
+    return true
+  }
+
   console.error('[ScriptError]', { message, source, lineno, colno, error })
   // reportError({ type: 'script', message, source, lineno, colno, error })
   return true // 阻止默认控制台报错，可根据需求改

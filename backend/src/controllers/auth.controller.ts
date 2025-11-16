@@ -25,7 +25,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     // 查询用户
     const [users] = await pool.execute<RowDataPacket[]>(
       `SELECT u.id, u.username, u.password, u.status, u.role_id, 
-              r.role_code, r.dashboard_path
+              r.role_code, r.dashboard_path, r.enabled as role_enabled
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        WHERE u.username = ?`,
@@ -47,6 +47,11 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     // 检查用户状态
     if (user.status !== 1) {
       throw createError('用户已被禁用', 403)
+    }
+
+    // 检查角色状态
+    if (user.role_enabled !== 1) {
+      throw createError('用户角色已被禁用', 403)
     }
 
     // 生成Token

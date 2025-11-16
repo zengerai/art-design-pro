@@ -131,65 +131,116 @@
         { name: 'password', type: 'string', required: true, description: '密码' }
       ],
       requestExample: `{
-  "userName": "super_admin",
+  "userName": "Super",
   "password": "123456"
 }`,
       responseFields: [
-        { name: 'token', type: 'string', required: true, description: '访问Token' },
-        { name: 'refreshToken', type: 'string', required: true, description: '刷新Token' },
-        { name: 'dashboardPath', type: 'string', required: true, description: '控制台跳转路径' }
+        { name: 'code', type: 'number', required: true, description: '响应码' },
+        { name: 'data', type: 'object', required: true, description: '返回数据' },
+        {
+          name: 'data.token',
+          type: 'string',
+          required: true,
+          description: 'Access Token（有效期30分钟）'
+        },
+        {
+          name: 'data.refreshToken',
+          type: 'string',
+          required: true,
+          description: 'Refresh Token（有效期7天）'
+        },
+        {
+          name: 'data.dashboardPath',
+          type: 'string',
+          required: true,
+          description: '控制台跳转路径'
+        }
       ],
       responseExample: `{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "dashboardPath": "/system/dashboard/console"
+  "code": 200,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "dashboardPath": "/system/dashboard/console"
+  }
 }`,
       errorCodes: [
-        { code: 401, message: '用户名或密码错误', description: '输入的用户名或密码不匹配' },
-        { code: 403, message: '用户已被禁用', description: '该用户账号已被管理员禁用' },
-        { code: 500, message: '服务器内部错误', description: '服务器处理请求时发生错误' }
+        { code: 400, message: '用户名和密码不能为空', description: '请求参数缺失' },
+        { code: 401, message: '用户名或密码错误', description: '用户不存在或密码不匹配' },
+        { code: 403, message: '用户已被禁用', description: '用户status字段为0' },
+        { code: 500, message: '服务器内部错误', description: '数据库或服务器错误' }
       ],
       businessLogic: [
-        '根据userName查询users表，检查用户是否存在',
-        '验证password是否匹配（使用bcrypt比对加密密码）',
-        '检查用户status是否为启用状态（1）',
-        '查询roles表获取用户角色信息和dashboard_path字段',
-        '生成JWT Token（有效期30分钟）和Refresh Token（有效期7天）',
-        '更新users表的last_login_time和last_login_ip',
-        '返回Token信息和控制台跳转路径（dashboardPath）'
+        '1. 验证userName和password是否为空',
+        '2. 查询users表和roles表（LEFT JOIN），获取用户信息、角色编码和dashboard_path',
+        '3. 验证用户是否存在',
+        '4. 使用bcrypt比对password和数据库中的加密密码',
+        '5. 检查用户status是否为1（启用状态）',
+        '6. 生成JWT Token（包含userId、username、roleCode）',
+        '7. 生成Refresh Token',
+        '8. 更新users表的last_login_time和last_login_ip字段',
+        '9. 返回token、refreshToken和dashboardPath'
       ]
     },
     {
       name: '获取用户信息',
-      description: '根据Token获取当前登录用户的详细信息',
+      description: '根据Token获取当前登录用户的基本信息，用于前端用户状态初始化',
       path: '/api/user/info',
       method: 'GET',
       headers: [
-        { name: 'Authorization', type: 'string', required: true, description: 'Bearer {token}' }
+        {
+          name: 'Authorization',
+          type: 'string',
+          required: true,
+          description: 'Bearer {token}（必须）'
+        }
       ],
       requestExample: `GET /api/user/info
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       responseFields: [
-        { name: 'userId', type: 'number', required: true, description: '用户ID' },
-        { name: 'userName', type: 'string', required: true, description: '用户名' },
-        { name: 'email', type: 'string', required: false, description: '邮箱' },
-        { name: 'avatar', type: 'string', required: false, description: '头像URL' },
-        { name: 'roles', type: 'string[]', required: true, description: '角色数组' },
-        { name: 'buttons', type: 'string[]', required: true, description: '按钮权限数组' }
+        { name: 'code', type: 'number', required: true, description: '响应码' },
+        { name: 'data', type: 'object', required: true, description: '用户信息对象' },
+        { name: 'data.userId', type: 'number', required: true, description: '用户ID' },
+        { name: 'data.userName', type: 'string', required: true, description: '用户名' },
+        { name: 'data.email', type: 'string', required: false, description: '邮箱' },
+        { name: 'data.avatar', type: 'string', required: false, description: '头像URL' },
+        {
+          name: 'data.roles',
+          type: 'array',
+          required: true,
+          description: '用户角色数组，如["R_SUPER"]'
+        },
+        {
+          name: 'data.buttons',
+          type: 'array',
+          required: true,
+          description: '按钮权限数组（当前为空数组）'
+        }
       ],
       responseExample: `{
-  "userId": 1,
-  "userName": "super_admin",
-  "email": "admin@example.com",
-  "avatar": "https://example.com/avatar.jpg",
-  "roles": ["R_SUPER"],
-  "buttons": ["user:add", "user:edit", "user:delete"]
+  "code": 200,
+  "data": {
+    "userId": 1,
+    "userName": "Super",
+    "email": "super@example.com",
+    "avatar": "https://example.com/avatar.jpg",
+    "roles": ["R_SUPER"],
+    "buttons": []
+  }
 }`,
+      errorCodes: [
+        { code: 401, message: '未提供认证令牌', description: '请求头缺少Authorization' },
+        { code: 401, message: 'Token验证失败', description: 'Token已过期或格式不正确' },
+        { code: 404, message: '用户不存在', description: 'Token中的userId对应的用户不存在' }
+      ],
       businessLogic: [
-        '解析Token获取userId',
-        '查询users表获取用户基本信息',
-        '通过role_id查询roles表获取角色信息',
-        '返回用户信息（不包含password字段）'
+        '1. 从请求头获取Authorization字段',
+        '2. 验证Token格式（Bearer {token}）',
+        '3. 解析Token获取userId',
+        '4. 查询users表和roles表（LEFT JOIN on u.role_id = r.id）',
+        '5. 获取用户的id、username、email、avatar和role_code',
+        '6. 将role_code放入roles数组返回',
+        '7. 前端使用此接口初始化用户状态、注册动态路由'
       ]
     },
     {
@@ -259,7 +310,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
     },
     {
       name: '用户注册',
-      description: '新用户注册账号',
+      description: '新用户自助注册账号，默认分配普通用户角色（R_USER）',
       path: '/api/auth/register',
       method: 'POST',
       params: [
@@ -273,7 +324,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       responseFields: [
         { name: 'code', type: 'number', required: true, description: '响应码' },
         { name: 'message', type: 'string', required: true, description: '提示信息' },
-        { name: 'data', type: 'object', required: false, description: '返回数据' },
+        { name: 'data', type: 'object', required: true, description: '返回数据' },
         { name: 'data.userId', type: 'number', required: true, description: '新创建的用户ID' }
       ],
       responseExample: `{
