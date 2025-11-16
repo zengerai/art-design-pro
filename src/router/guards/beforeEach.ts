@@ -47,6 +47,7 @@ import { RoutesAlias } from '../routesAlias'
 import { staticRoutes } from '../routes/staticRoutes'
 import { loadingService } from '@/utils/ui'
 import { useCommon } from '@/hooks/core/useCommon'
+import { useHomePath } from '@/hooks/core/useHomePath'
 import { useWorktabStore } from '@/store/modules/worktab'
 import { fetchGetUserInfo } from '@/api/auth'
 import { ApiStatus } from '@/utils/http/status'
@@ -329,6 +330,7 @@ export function resetRouterState(delay: number): void {
 
 /**
  * 处理根路径重定向到首页
+ * 根据用户角色跳转到不同的工作台
  * @returns true 表示已处理跳转，false 表示无需跳转
  */
 function handleRootPathRedirect(to: RouteLocationNormalized, next: NavigationGuardNext): boolean {
@@ -336,8 +338,10 @@ function handleRootPathRedirect(to: RouteLocationNormalized, next: NavigationGua
     return false
   }
 
-  const { homePath } = useCommon()
+  // 使用新的 useHomePath 组合式函数
+  const { homePath } = useHomePath()
   if (homePath.value && homePath.value !== '/') {
+    console.log(`[路由守卫] 根路径重定向到: ${homePath.value}`)
     next({ path: homePath.value, replace: true })
     return true
   }

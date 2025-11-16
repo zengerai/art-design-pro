@@ -93,3 +93,39 @@ export type Environment = 'development' | 'production' | 'test'
 
 // 弹窗类型
 export type DialogType = 'add' | 'edit'
+
+/**
+ * 用户角色类型
+ * 定义系统中的用户角色标识
+ */
+export type UserRole = 'R_SUPER' | 'R_ADMIN' | 'R_USER'
+
+/**
+ * 角色配置接口
+ * 定义角色的详细配置信息
+ */
+export interface RoleConfig {
+  /** 角色代码 */
+  roleCode: UserRole
+  /** 角色名称 */
+  roleName: string
+  /** 角色对应的首页路径 */
+  homePath: string
+  /** 角色优先级，数字越大优先级越高 */
+  priority: number
+}
+
+/**
+ * 用户角色信息接口
+ * 定义用户的角色和权限信息
+ */
+export interface UserRoleInfo {
+  /** 用户ID */
+  userId: string | number
+  /** 用户名 */
+  userName: string
+  /** 用户角色数组 */
+  roles: UserRole[]
+  /** 用户权限标识数组（可选） */
+  permissions?: string[]
+}

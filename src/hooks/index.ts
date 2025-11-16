@@ -7,6 +7,12 @@ export { useAppMode } from './core/useAppMode'
 // 权限控制
 export { useAuth } from './core/useAuth'
 
+// 角色权限验证
+export { useRolePermission } from './core/useRolePermission'
+
+// 首页路径管理
+export { useHomePath, getHomePathByRoles } from './core/useHomePath'
+
 // 表格数据管理方案
 export { useTable } from './core/useTable'
 

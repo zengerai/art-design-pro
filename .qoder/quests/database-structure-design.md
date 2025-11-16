@@ -14,7 +14,7 @@
 
 ### 1. 登录界面
 
-**访问路径**：http://localhost:3006/#/auth/login
+**访问路径**：http://localhost:3007/#/auth/login
 
 **功能说明**：
 
@@ -33,15 +33,15 @@
 
 **预置测试账号**：
 
-| 角色类型   | 用户名 | 密码   | 角色标识    |
-| ---------- | ------ | ------ | ----------- |
-| 超级管理员 | Super  | 123456 | super_admin |
-| 管理员     | Admin  | 123456 | admin       |
-| 普通用户   | User   | 123456 | user        |
+| 角色类型   | 用户名 | 密码   | 角色标识 |
+| ---------- | ------ | ------ | -------- |
+| 超级管理员 | Super  | 123456 | R_SUPER  |
+| 管理员     | Admin  | 123456 | R_ADMIN  |
+| 普通用户   | User   | 123456 | R_USER   |
 
 ### 2. 用户个人中心界面
 
-**访问路径**：http://localhost:3006/#/system/user-center
+**访问路径**：http://localhost:3007/#/system/user-center
 
 **功能说明**：
 
@@ -72,7 +72,7 @@
 
 ### 3. 注册界面
 
-**访问路径**：http://localhost:3006/#/auth/register
+**访问路径**：http://localhost:3007/#/auth/register
 
 **功能说明**：
 
@@ -737,11 +737,11 @@ Authorization: Bearer {token}
 
 **预置数据**：
 
-| id  | role_name      | role_code   | dashboard_path            | description              |
-| --- | -------------- | ----------- | ------------------------- | ------------------------ |
-| 1   | 系统后台管理员 | super_admin | /system/dashboard/console | 超级管理员，拥有所有权限 |
-| 2   | 系统管理员     | admin       | /user/dashboard/console   | 系统管理员               |
-| 3   | 系统用户       | user        | /user/dashboard/console   | 普通用户                 |
+| id  | role_name      | role_code | dashboard_path            | description              |
+| --- | -------------- | --------- | ------------------------- | ------------------------ |
+| 1   | 系统后台管理员 | R_SUPER   | /system/dashboard/console | 超级管理员，拥有所有权限 |
+| 2   | 系统管理员     | R_ADMIN   | /user/dashboard/console   | 系统管理员               |
+| 3   | 系统用户       | R_USER    | /user/dashboard/console   | 普通用户                 |
 
 ### 3. 用户标签表 (user_tags)
 
@@ -830,9 +830,9 @@ sequenceDiagram
         F->>F: 存储Token到localStorage
         F->>F: router.push(dashboardPath)
 
-        alt 角色为super_admin
+        alt 角色为R_SUPER
             F->>U: 跳转到 /system/dashboard/console
-        else 角色为admin或user
+        else 角色为R_ADMIN或R_USER
             F->>U: 跳转到 /user/dashboard/console
         end
     else 用户不存在或密码错误
@@ -886,16 +886,16 @@ sequenceDiagram
 
 | 角色编码 | 角色名称 | 跳转路径 | 完整URL |
 | --- | --- | --- | --- |
-| super_admin | 系统后台管理员 | /system/dashboard/console | http://localhost:3006/system/dashboard/console |
-| admin | 系统管理员 | /user/dashboard/console | http://localhost:3006/user/dashboard/console |
-| user | 系统用户 | /user/dashboard/console | http://localhost:3006/user/dashboard/console |
+| R_SUPER | 系统后台管理员 | /system/dashboard/console | http://localhost:3007/#/system/dashboard/console |
+| R_ADMIN | 系统管理员 | /user/dashboard/console | http://localhost:3007/#/user/dashboard/console |
+| R_USER | 系统用户 | /user/dashboard/console | http://localhost:3007/#/user/dashboard/console |
 
 **跳转逻辑实现**：
 
 1. **后端返回跳转路径**：
    - 登录接口 `POST /api/auth/login` 返回数据中包含 `dashboardPath` 字段
    - 该字段值从 `roles` 表的 `dashboard_path` 字段获取
-   - 示例：super_admin 返回 `/system/dashboard/console`
+   - 示例：R_SUPER 返回 `/system/dashboard/console`
 
 2. **前端执行跳转**：
    - 登录成功后，接收后端返回的 `dashboardPath`
