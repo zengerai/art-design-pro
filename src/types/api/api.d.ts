@@ -96,14 +96,12 @@ declare namespace Api {
       avatar: string
       status: string
       userName: string
-      userGender: string
+      userGender: number // 性别：1-男，2-女
       nickName: string
       userPhone: string
       userEmail: string
       userRoles: string[]
-      createBy: string
       createTime: string
-      updateBy: string
       updateTime: string
     }
 
@@ -112,6 +110,22 @@ declare namespace Api {
       Pick<UserListItem, 'id' | 'userName' | 'userGender' | 'userPhone' | 'userEmail' | 'status'> &
         Api.Common.CommonSearchParams
     >
+
+    /** 创建用户参数 */
+    interface CreateUserParams {
+      username: string
+      phone: string
+      gender: number // 性别：1-男，2-女
+      role: string[]
+    }
+
+    /** 更新用户参数 */
+    interface UpdateUserParams {
+      username: string
+      phone: string
+      gender: number // 性别：1-男，2-女
+      role?: string[]
+    }
 
     /** 角色列表 */
     type RoleList = Api.Common.PaginatedResponse<RoleListItem>
@@ -131,5 +145,72 @@ declare namespace Api {
       Pick<RoleListItem, 'roleId' | 'roleName' | 'roleCode' | 'description' | 'enabled'> &
         Api.Common.CommonSearchParams
     >
+
+    /** 创建角色参数 */
+    interface CreateRoleParams {
+      roleName: string
+      roleCode: string
+      description: string
+      enabled: boolean
+    }
+
+    /** 更新角色参数 */
+    interface UpdateRoleParams {
+      roleName: string
+      roleCode: string
+      description: string
+      enabled: boolean
+    }
+  }
+
+  /** API文档类型 */
+  namespace ApiDoc {
+    /** API文档项接口 */
+    interface ApiDocItem {
+      /** 接口名称 */
+      name: string
+      /** 接口描述 */
+      description: string
+      /** 请求路径 */
+      path: string
+      /** 请求方法 */
+      method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+      /** 请求头 */
+      headers?: ApiDocParam[]
+      /** 请求参数 */
+      params?: ApiDocParam[]
+      /** 请求示例JSON */
+      requestExample: string
+      /** 响应参数 */
+      responseFields?: ApiDocParam[]
+      /** 响应示例JSON */
+      responseExample: string
+      /** 错误码列表 */
+      errorCodes?: ApiErrorCode[]
+      /** 业务逻辑步骤 */
+      businessLogic?: string[]
+    }
+
+    /** API参数接口 */
+    interface ApiDocParam {
+      /** 参数名称 */
+      name: string
+      /** 参数类型 */
+      type: string
+      /** 是否必填 */
+      required: boolean
+      /** 参数说明 */
+      description: string
+    }
+
+    /** API错误码接口 */
+    interface ApiErrorCode {
+      /** 错误码 */
+      code: string | number
+      /** 错误信息 */
+      message: string
+      /** 错误说明 */
+      description: string
+    }
   }
 }

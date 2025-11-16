@@ -14,8 +14,8 @@
       </ElFormItem>
       <ElFormItem label="性别" prop="gender">
         <ElSelect v-model="formData.gender">
-          <ElOption label="男" value="男" />
-          <ElOption label="女" value="女" />
+          <ElOption label="男" :value="1" />
+          <ElOption label="女" :value="2" />
         </ElSelect>
       </ElFormItem>
       <ElFormItem label="角色" prop="role">
@@ -39,8 +39,10 @@
 </template>
 
 <script setup lang="ts">
+  import { ElMessage } from 'element-plus'
   import { ROLE_LIST_DATA } from '@/mock/temp/formData'
   import type { FormInstance, FormRules } from 'element-plus'
+  import { fetchCreateUser, fetchUpdateUser } from '@/api/system-manage'
 
   interface Props {
     visible: boolean
@@ -74,7 +76,7 @@
   const formData = reactive({
     username: '',
     phone: '',
-    gender: '男',
+    gender: 1 as 1 | 2, // 1-男，2-女
     role: [] as string[]
   })
 
@@ -103,7 +105,7 @@
     Object.assign(formData, {
       username: isEdit && row ? row.userName || '' : '',
       phone: isEdit && row ? row.userPhone || '' : '',
-      gender: isEdit && row ? row.userGender || '男' : '男',
+      gender: isEdit && row && row.userGender ? (row.userGender as number) : 1,
       role: isEdit && row ? (Array.isArray(row.userRoles) ? row.userRoles : []) : []
     })
   }
@@ -127,16 +129,41 @@
 
   /**
    * 提交表单
-   * 验证通过后触发提交事件
+   * 验证通过后调用API
    */
   const handleSubmit = async () => {
     if (!formRef.value) return
 
-    await formRef.value.validate((valid) => {
+    await formRef.value.validate(async (valid) => {
       if (valid) {
-        ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功')
-        dialogVisible.value = false
-        emit('submit')
+        try {
+          if (dialogType.value === 'add') {
+            // 创建用户
+            await fetchCreateUser({
+              username: formData.username,
+              phone: formData.phone,
+              gender: formData.gender,
+              role: formData.role
+            })
+          } else {
+            // 更新用户
+            const userId = props.userData?.id
+            if (!userId) {
+              ElMessage.error('用户ID不存在')
+              return
+            }
+            await fetchUpdateUser(userId, {
+              username: formData.username,
+              phone: formData.phone,
+              gender: formData.gender,
+              role: formData.role
+            })
+          }
+          dialogVisible.value = false
+          emit('submit')
+        } catch (error) {
+          console.error('操作失败:', error)
+        }
       }
     })
   }

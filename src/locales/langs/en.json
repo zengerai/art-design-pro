@@ -322,8 +322,7 @@
         "title": "API Documentation",
         "auth": "Authentication",
         "user": "User Management",
-        "role": "Role Management",
-        "menu": "Menu Management"
+        "role": "Role Management"
       }
     }
   },

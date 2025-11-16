@@ -581,42 +581,421 @@ file: 文件对象（图片文件）
 6. 更新users表的avatar字段
 7. 返回头像URL
 
-### 3. 角色管理相关接口
+### 3. 用户管理相关接口
 
-#### 3.1 获取角色列表
+#### 3.1 获取用户列表
 
-**接口路径**：`GET /api/roles`
+**接口路径**:`GET /api/user/list`
 
-**请求头**：
+**请求头**:
 
 ```
 Authorization: Bearer {token}
 ```
 
-**返回数据**：
+**请求参数**:
+
+```
+{
+  "current": "number",        // 当前页码，默认1
+  "size": "number",           // 每页条数，默认20
+  "userName": "string",       // 用户名，可选
+  "userGender": "string",     // 性别，可选
+  "userPhone": "string",      // 手机号，可选
+  "userEmail": "string",      // 邮箱，可选
+  "status": "string"          // 状态，可选
+}
+```
+
+**返回数据**:
 
 ```
 {
   "code": 200,
-  "data": [
-    {
-      "id": "number",
-      "roleName": "string",
-      "roleCode": "string",
-      "dashboardPath": "string",
-      "description": "string",
-      "status": "number",
-      "createdAt": "string"
-    }
-  ]
+  "data": {
+    "records": [
+      {
+        "id": "number",
+        "avatar": "string",
+        "status": "string",
+        "userName": "string",
+        "userGender": "string",
+        "nickName": "string",
+        "userPhone": "string",
+        "userEmail": "string",
+        "userRoles": ["string"],
+        "createBy": "string",
+        "createTime": "string",
+        "updateBy": "string",
+        "updateTime": "string"
+      }
+    ],
+    "total": "number",
+    "current": "number",
+    "size": "number"
+  }
 }
 ```
 
-**业务逻辑**：
+**业务逻辑**:
 
-1. 查询roles表获取所有角色
-2. 按照id升序排列
-3. 返回角色列表
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 根据搜索条件构建查询条件
+3. 查询users表获取用户列表
+4. 关联roles表获取用户角色信息
+5. 支持分页查询
+6. 返回用户列表数据（不包含password字段）
+
+**权限要求**: R_SUPER（系统后台管理员）
+
+#### 3.2 创建用户
+
+**接口路径**:`POST /api/user`
+
+**请求头**:
+
+```
+Authorization: Bearer {token}
+```
+
+**请求参数**:
+
+```
+{
+  "username": "string",       // 用户名，必填，2-20字符
+  "phone": "string",          // 手机号，必填，11位手机号
+  "gender": "string",         // 性别，必填，"男"或"女"
+  "role": ["string"]          // 角色编码数组，必填
+}
+```
+
+**返回数据**:
+
+```
+{
+  "code": 200,
+  "message": "创建成功",
+  "data": {
+    "userId": "number"         // 新创建的用户ID
+  }
+}
+```
+
+**业务逻辑**:
+
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 验证用户名是否已存在
+3. 验证手机号格式
+4. 生成默认密码（如：123456）并使用bcrypt加密
+5. 创建用户记录，设置以下字段：
+   - username: 用户输入的用户名
+   - password: 加密后的默认密码
+   - mobile: 手机号
+   - sex: 性别（"男"转为1，"女"转为2）
+   - role_id: 根据角色编码查询角色ID
+   - status: 1（默认启用）
+   - created_at: 当前时间
+6. 返回新创建的用户ID
+
+**错误码**:
+
+- 400：参数验证失败
+- 403：权限不足
+- 409：用户名已存在
+- 500：服务器内部错误
+
+**权限要求**: R_SUPER（系统后台管理员）
+
+#### 3.3 更新用户
+
+**接口路径**:`PUT /api/user/{id}`
+
+**请求头**:
+
+```
+Authorization: Bearer {token}
+```
+
+**请求参数**:
+
+```
+{
+  "username": "string",       // 用户名，必填，2-20字符
+  "phone": "string",          // 手机号，必填，11位手机号
+  "gender": "string",         // 性别，必填，"男"或"女"
+  "role": ["string"]          // 角色编码数组，必填
+}
+```
+
+**返回数据**:
+
+```
+{
+  "code": 200,
+  "message": "更新成功"
+}
+```
+
+**业务逻辑**:
+
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 验证用户是否存在
+3. 如果修改了用户名，检查新用户名是否已被使用
+4. 验证手机号格式
+5. 更新users表对应字段：
+   - username: 用户名
+   - mobile: 手机号
+   - sex: 性别
+   - role_id: 角色ID
+   - updated_at: 当前时间
+6. 返回更新结果
+
+**错误码**:
+
+- 400：参数验证失败
+- 403：权限不足
+- 404：用户不存在
+- 409：用户名已被使用
+- 500：服务器内部错误
+
+**权限要求**: R_SUPER（系统后台管理员）
+
+#### 3.4 删除用户
+
+**接口路径**:`DELETE /api/user/{id}`
+
+**请求头**:
+
+```
+Authorization: Bearer {token}
+```
+
+**返回数据**:
+
+```
+{
+  "code": 200,
+  "message": "删除成功"
+}
+```
+
+**业务逻辑**:
+
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 验证用户是否存在
+3. 检查是否为当前登录用户（不允许删除自己）
+4. 删除user_tags表中该用户的所有标签
+5. 删除users表中的用户记录（或将status设为已注销）
+6. 返回删除结果
+
+**错误码**:
+
+- 400：不允许删除自己
+- 403：权限不足
+- 404：用户不存在
+- 500：服务器内部错误
+
+**权限要求**: R_SUPER（系统后台管理员）
+
+### 4. 角色管理相关接口
+
+#### 4.1 获取角色列表
+
+**接口路径**:`GET /api/role/list`
+
+**请求头**:
+
+```
+Authorization: Bearer {token}
+```
+
+**请求参数**:
+
+```
+{
+  "current": "number",        // 当前页码，默认1
+  "size": "number",           // 每页条数，默认20
+  "roleName": "string",       // 角色名称，可选
+  "roleCode": "string",       // 角色编码，可选
+  "description": "string",    // 角色描述，可选
+  "enabled": "boolean"        // 启用状态，可选
+}
+```
+
+**返回数据**:
+
+```
+{
+  "code": 200,
+  "data": {
+    "records": [
+      {
+        "roleId": "number",
+        "roleName": "string",
+        "roleCode": "string",
+        "description": "string",
+        "enabled": "boolean",
+        "createTime": "string"
+      }
+    ],
+    "total": "number",
+    "current": "number",
+    "size": "number"
+  }
+}
+```
+
+**业务逻辑**:
+
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 根据搜索条件构建查询条件
+3. 查询roles表获取角色列表
+4. 支持分页查询
+5. 按照id升序排列
+6. 返回角色列表
+
+**权限要求**: R_SUPER（系统后台管理员）
+
+#### 4.2 创建角色
+
+**接口路径**:`POST /api/role`
+
+**请求头**:
+
+```
+Authorization: Bearer {token}
+```
+
+**请求参数**:
+
+```
+{
+  "roleName": "string",       // 角色名称，必填，2-20字符
+  "roleCode": "string",       // 角色编码，必填，2-50字符
+  "description": "string",    // 角色描述，必填
+  "enabled": "boolean"        // 启用状态，默认true
+}
+```
+
+**返回数据**:
+
+```
+{
+  "code": 200,
+  "message": "创建成功",
+  "data": {
+    "roleId": "number"         // 新创建的角色ID
+  }
+}
+```
+
+**业务逻辑**:
+
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 验证角色编码是否已存在
+3. 创建角色记录，设置以下字段：
+   - role_name: 角色名称
+   - role_code: 角色编码
+   - description: 角色描述
+   - dashboard_path: 默认为/user/dashboard/console
+   - status: 根据enabled参数设置（true为1，false为0）
+   - created_at: 当前时间
+4. 返回新创建的角色ID
+
+**错误码**:
+
+- 400：参数验证失败
+- 403：权限不足
+- 409：角色编码已存在
+- 500：服务器内部错误
+
+**权限要求**: R_SUPER（系统后台管理员）
+
+#### 4.3 更新角色
+
+**接口路径**:`PUT /api/role/{id}`
+
+**请求头**:
+
+```
+Authorization: Bearer {token}
+```
+
+**请求参数**:
+
+```
+{
+  "roleName": "string",       // 角色名称，必填，2-20字符
+  "roleCode": "string",       // 角色编码，必填，2-50字符
+  "description": "string",    // 角色描述，必填
+  "enabled": "boolean"        // 启用状态
+}
+```
+
+**返回数据**:
+
+```
+{
+  "code": 200,
+  "message": "更新成功"
+}
+```
+
+**业务逻辑**:
+
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 验证角色是否存在
+3. 如果修改了角色编码，检查新编码是否已被使用
+4. 不允许修改系统预置角色（R_SUPER、R_ADMIN、R_USER）
+5. 更新roles表对应字段
+6. 返回更新结果
+
+**错误码**:
+
+- 400：参数验证失败或不允许修改系统角色
+- 403：权限不足
+- 404：角色不存在
+- 409：角色编码已被使用
+- 500：服务器内部错误
+
+**权限要求**: R_SUPER（系统后台管理员）
+
+#### 4.4 删除角色
+
+**接口路径**:`DELETE /api/role/{id}`
+
+**请求头**:
+
+```
+Authorization: Bearer {token}
+```
+
+**返回数据**:
+
+```
+{
+  "code": 200,
+  "message": "删除成功"
+}
+```
+
+**业务逻辑**:
+
+1. 解析Token验证用户权限（需要R_SUPER角色）
+2. 验证角色是否存在
+3. 不允许删除系统预置角色（R_SUPER、R_ADMIN、R_USER）
+4. 检查该角色下是否有用户，如有则不允许删除
+5. 删除roles表中的角色记录
+6. 返回删除结果
+
+**错误码**:
+
+- 400：不允许删除系统角色或该角色下有用户
+- 403：权限不足
+- 404：角色不存在
+- 500：服务器内部错误
+
+**权限要求**: R_SUPER（系统后台管理员）
 
 ## 前后端数据库字段对齐关系
 
@@ -658,17 +1037,47 @@ Authorization: Bearer {token}
 | -        | description   | description    | roles  | 角色描述   |
 | -        | status        | status         | roles  | 角色状态   |
 
-### 4. 注册流程字段映射
+### 6. 用户管理字段映射
 
-| 前端字段        | 后端API字段 | 数据库字段 | 数据表 | 说明                   |
-| --------------- | ----------- | ---------- | ------ | ---------------------- |
-| username        | username    | username   | users  | 用户名，唯一           |
-| password        | password    | password   | users  | 密码（加密后存储）     |
-| confirmPassword | -           | -          | -      | 仅前端验证，不传输后端 |
-| agreement       | -           | -          | -      | 仅前端验证，不传输后端 |
-| -               | -           | role_id    | users  | 默认3（普通用户）      |
-| -               | -           | status     | users  | 默认1（启用）          |
-| -               | userId      | id         | users  | 注册成功后返回         |
+| 前端字段 | 后端 API 字段 | 数据库字段 | 数据表 | 说明             |
+| -------- | ------------- | ---------- | ------ | ---------------- |
+| -        | id            | id         | users  | 用户 ID          |
+| -        | avatar        | avatar     | users  | 用户头像         |
+| -        | status        | status     | users  | 用户状态         |
+| username | userName      | username   | users  | 用户名           |
+| gender   | userGender    | sex        | users  | 性别（男/女）    |
+| -        | nickName      | nickname   | users  | 昵称             |
+| phone    | userPhone     | mobile     | users  | 手机号           |
+| -        | userEmail     | email      | users  | 邮箱             |
+| role     | userRoles     | role_id    | users  | 角色数组（关联） |
+| -        | createBy      | -          | -      | 创建人           |
+| -        | createTime    | created_at | users  | 创建时间         |
+| -        | updateBy      | -          | -      | 更新人           |
+| -        | updateTime    | updated_at | users  | 更新时间         |
+
+### 7. 角色管理字段映射
+
+| 前端字段    | 后端 API 字段 | 数据库字段     | 数据表 | 说明       |
+| ----------- | ------------- | -------------- | ------ | ---------- |
+| -           | roleId        | id             | roles  | 角色 ID    |
+| roleName    | roleName      | role_name      | roles  | 角色名称   |
+| roleCode    | roleCode      | role_code      | roles  | 角色编码   |
+| description | description   | description    | roles  | 角色描述   |
+| enabled     | enabled       | status         | roles  | 启用状态   |
+| -           | createTime    | created_at     | roles  | 创建时间   |
+| -           | dashboardPath | dashboard_path | roles  | 控制台路径 |
+
+### 5. 注册流程字段映射
+
+| 前端字段        | 后端API字段 | 数据库字段 | 数据表 | 说明                  |
+| --------------- | ----------- | ---------- | ------ | --------------------- |
+| username        | username    | username   | users  | 用户名,唯一           |
+| password        | password    | password   | users  | 密码(加密后存储)      |
+| confirmPassword | -           | -          | -      | 仅前端验证,不传输后端 |
+| agreement       | -           | -          | -      | 仅前端验证,不传输后端 |
+| -               | -           | role_id    | users  | 默认3(普通用户)       |
+| -               | -           | status     | users  | 默认1(启用)           |
+| -               | userId      | id         | users  | 注册成功后返回        |
 
 ## 数据库基本信息
 
@@ -679,11 +1088,11 @@ Authorization: Bearer {token}
 
 ## 核心数据表设计
 
-系统共包含3张核心数据表：
+系统共包含3张核心数据表:
 
-1. **users（用户表）**：存储用户基本信息、认证信息和个人资料
-2. **roles（角色表）**：定义系统角色及权限配置
-3. **user_tags（用户标签表）**：存储用户个性化标签
+1. **users(用户表)**:存储用户基本信息、认证信息和个人资料
+2. **roles(角色表)**:定义系统角色及权限配置
+3. **user_tags(用户标签表)**:存储用户个性化标签
 
 ### 1. 用户表 (users)
 
@@ -754,11 +1163,11 @@ Authorization: Bearer {token}
 | tag_name   | VARCHAR  | 50   | 是       | -                 | 标签名称           |
 | created_at | DATETIME | -    | 是       | CURRENT_TIMESTAMP | 创建时间           |
 
-**索引设计**：
+**索引设计**:
 
-- 主键索引：id
-- 普通索引：user_id
-- 联合索引：(user_id, tag_name) 防止重复添加相同标签
+- 主键索引:id
+- 普通索引:user_id
+- 联合索引:(user_id, tag_name) 防止重复添加相同标签
 
 ## 数据表关系说明
 
@@ -804,6 +1213,17 @@ erDiagram
         datetime created_at
     }
 ```
+
+**关系说明**:
+
+1. **users 与 roles**:多对一关系
+   - 一个用户对应一个角色
+   - 一个角色可以分配给多个用户
+   - 通过users.role_id外键关联
+
+2. **users 与 user_tags**:一对多关系
+   - 一个用户可以拥有多个标签
+   - 通过user_tags.user_id外键关联
 
 ## 登录认证流程
 
@@ -1198,16 +1618,450 @@ sequenceDiagram
 - 为datetime字段设置默认值和自动更新
 - 为外键字段添加合适的约束或说明
 
-## 数据维护建议
+## API文档系统集成
 
-### 定期维护任务
+### 集成概述
 
-- 定期备份用户数据
-- 监控用户状态，及时处理异常账号
-- 定期检查用户权限配置是否合理
+为了在系统后台管理员工作台中提供统一的API文档查阅入口,需要将本设计文档中的API接口按功能模块分类整合到 `http://localhost:3007/#/system/dashboard/api-docs/` 路径下。
 
-### 数据完整性
+根据 `add-api-doc-menu-item.md` 的设计规范,需要将本文档中定义的20个API接口按以下模块组织:
 
-- 删除用户前需评估影响，建议使用禁用而非物理删除
-- 角色删除前需确保没有用户关联该角色
-- 用户标签可随时删除，不影响用户主体数据
+- **认证模块**:6个接口(登录、注册、Token管理等)
+- **用户管理模块**:11个接口(个人信息、密码、标签、头像管理、用户CRUD)
+- **角色管理模块**:3个接口(角色列表查询、角色CRUD)
+
+### 实施目标
+
+1. 将本文档中定义的所有API接口补充到API文档系统
+2. 按照标准化的文档结构组织内容
+3. 确保与现有API文档的风格保持一致
+4. 如有冲突,以本文档内容为准
+
+### 需要补充的API接口清单
+
+#### 认证模块 (路径:/system/dashboard/api-docs/auth)
+
+现有接口:
+
+- ✅ POST /api/auth/login - 用户登录
+- ✅ GET /api/user/info - 获取用户信息
+
+需要新增:
+
+- ➕ POST /api/auth/refresh-token - 刷新Token
+- ➕ POST /api/auth/logout - 用户登出
+- ➕ POST /api/auth/register - 用户注册
+- ➕ GET /api/auth/check-username - 检查用户名是否存在
+
+#### 用户管理模块 (路径:/system/dashboard/api-docs/user)
+
+现有接口:
+
+- ✅ GET /api/user/list - 获取用户列表
+
+需要新增:
+
+- ➕ GET /api/user/profile - 获取用户详情
+- ➕ PUT /api/user/profile - 更新用户信息
+- ➕ POST /api/user/change-password - 修改密码
+- ➕ POST /api/user/tags - 更新用户标签
+- ➕ POST /api/user/avatar - 上传用户头像
+- ➕ POST /api/user - 创建用户
+- ➕ PUT /api/user/{id} - 更新用户
+- ➕ DELETE /api/user/{id} - 删除用户
+
+#### 角色管理模块 (路径:/system/dashboard/api-docs/role)
+
+现有接口:
+
+- ✅ GET /api/role/list - 获取角色列表
+
+需要新增:
+
+- ➕ POST /api/role - 创建角色
+- ➕ PUT /api/role/{id} - 更新角色
+- ➕ DELETE /api/role/{id} - 删除角色
+
+### API文档菜单结构
+
+根据本设计文档中的API接口,应在API文档菜单中创建以下模块:
+
+```mermaid
+graph TD
+    A[API文档<br/>/system/dashboard/api-docs] --> B[认证模块<br/>/api-docs/auth]
+    A --> C[用户管理<br/>/api-docs/user]
+    A --> D[角色管理<br/>/api-docs/role]
+
+    B --> B1[用户登录]
+    B --> B2[获取用户信息]
+    B --> B3[刷新Token]
+    B --> B4[用户登出]
+    B --> B5[用户注册]
+    B --> B6[检查用户名]
+
+    C --> C1[获取用户列表]
+    C --> C2[获取用户详情]
+    C --> C3[更新用户信息]
+    C --> C4[修改密码]
+    C --> C5[更新用户标签]
+    C --> C6[上传用户头像]
+    C --> C7[创建用户]
+    C --> C8[更新用户]
+    C --> C9[删除用户]
+
+    D --> D1[获取角色列表]
+    D --> D2[创建角色]
+    D --> D3[更新角色]
+    D --> D4[删除角色]
+```
+
+### 模块详细设计
+
+#### 1. 认证模块API文档
+
+**路由路径**:`/system/dashboard/api-docs/auth`
+
+**组件名称**:`SystemApiDocAuth`
+
+**文件路径**:`src/views/system/dashboard/api-docs/auth/index.vue`
+
+**模块描述**:包含用户登录、注册、Token管理等认证相关的API接口文档。
+
+**包含API接口**:
+
+| 序号 | 接口名称           | 接口路径                     | 请求方法 | 文档位置      |
+| ---- | ------------------ | ---------------------------- | -------- | ------------- |
+| 1    | 用户登录           | POST /api/auth/login         | POST     | 本文档第1.1节 |
+| 2    | 获取用户信息       | GET /api/user/info           | GET      | 本文档第1.2节 |
+| 3    | 刷新Token          | POST /api/auth/refresh-token | POST     | 本文档第1.3节 |
+| 4    | 用户登出           | POST /api/auth/logout        | POST     | 本文档第1.4节 |
+| 5    | 用户注册           | POST /api/auth/register      | POST     | 本文档第1.5节 |
+| 6    | 检查用户名是否存在 | GET /api/auth/check-username | GET      | 本文档第1.6节 |
+
+**文档展示内容**:
+
+每个API接口应包含:
+
+- 接口名称和描述
+- 请求地址和请求方法
+- 请求头(如需要)
+- 请求参数表格(参数名、类型、必填、说明)
+- 请求示例JSON
+- 响应参数表格
+- 响应示例JSON(成功/失败)
+- 错误码说明
+- 业务逻辑说明
+
+**关键点**:
+
+- 登录接口返回的`dashboardPath`字段用于角色跳转
+- Token有效期:AccessToken 30分钟,RefreshToken 7天
+- 注册默认角色为R_USER(普通用户)
+
+---
+
+#### 2. 用户管理模块API文档
+
+**路由路径**:`/system/dashboard/api-docs/user`
+
+**组件名称**:`SystemApiDocUser`
+
+**文件路径**:`src/views/system/dashboard/api-docs/user/index.vue`
+
+**模块描述**:包含用户个人信息管理、密码修改、标签管理、头像上传、用户CRUD等相关的API接口文档。
+
+**包含API接口**:
+
+| 序号 | 接口名称     | 接口路径                       | 请求方法 | 文档位置      | 权限要求 |
+| ---- | ------------ | ------------------------------ | -------- | ------------- | -------- |
+| 1    | 获取用户列表 | GET /api/user/list             | GET      | 本文档第3.1节 | R_SUPER  |
+| 2    | 获取用户详情 | GET /api/user/profile          | GET      | 本文档第2.1节 | 当前用户 |
+| 3    | 更新用户信息 | PUT /api/user/profile          | PUT      | 本文档第2.2节 | 当前用户 |
+| 4    | 修改密码     | POST /api/user/change-password | POST     | 本文档第2.3节 | 当前用户 |
+| 5    | 更新用户标签 | POST /api/user/tags            | POST     | 本文档第2.4节 | 当前用户 |
+| 6    | 上传用户头像 | POST /api/user/avatar          | POST     | 本文档第2.5节 | 当前用户 |
+| 7    | 创建用户     | POST /api/user                 | POST     | 本文档第3.2节 | R_SUPER  |
+| 8    | 更新用户     | PUT /api/user/{id}             | PUT      | 本文档第3.3节 | R_SUPER  |
+| 9    | 删除用户     | DELETE /api/user/{id}          | DELETE   | 本文档第3.4节 | R_SUPER  |
+
+**关键点**:
+
+- 获取用户详情包含基本信息、角色信息和标签列表
+- 修改密码需要验证旧密码
+- 更新标签支持批量替换
+- 头像上传使用multipart/form-data格式
+- 用户列表、创建、更新、删除接口仅R_SUPER角色可访问
+
+---
+
+#### 3. 角色管理模块API文档
+
+**路由路径**:`/system/dashboard/api-docs/role`
+
+**组件名称**:`SystemApiDocRole`
+
+**文件路径**:`src/views/system/dashboard/api-docs/role/index.vue`
+
+**模块描述**:包含系统角色查询和管理相关的API接口文档。
+
+**包含API接口**:
+
+| 序号 | 接口名称     | 接口路径              | 请求方法 | 文档位置      | 权限要求 |
+| ---- | ------------ | --------------------- | -------- | ------------- | -------- |
+| 1    | 获取角色列表 | GET /api/role/list    | GET      | 本文档第4.1节 | R_SUPER  |
+| 2    | 创建角色     | POST /api/role        | POST     | 本文档第4.2节 | R_SUPER  |
+| 3    | 更新角色     | PUT /api/role/{id}    | PUT      | 本文档第4.3节 | R_SUPER  |
+| 4    | 删除角色     | DELETE /api/role/{id} | DELETE   | 本文档第4.4节 | R_SUPER  |
+
+**关键点**:
+
+- 返回所有角色的完整信息,包括`dashboardPath`字段
+- 系统预置三种角色:R_SUPER、R_ADMIN、R_USER
+- 不允许修改或删除系统预置角色
+- 删除角色前需检查该角色下是否有用户
+- 仅R_SUPER角色可访问角色管理所有接口
+
+### 技术实现指导
+
+#### 数据结构定义
+
+根据 `add-api-doc-menu-item.md` 的规范,建议在 `src/types/api/api.d.ts` 中定义以下类型:
+
+```typescript
+namespace ApiDoc {
+  // API文档项接口
+  interface ApiDocItem {
+    name: string // 接口名称
+    description: string // 接口描述
+    path: string // 请求路径
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' // 请求方法
+    headers?: ApiDocParam[] // 请求头
+    params?: ApiDocParam[] // 请求参数
+    requestExample: string // 请求示例JSON
+    responseFields?: ApiDocParam[] // 响应参数
+    responseExample: string // 响应示例JSON
+    errorCodes?: ApiErrorCode[] // 错误码列表
+    businessLogic?: string[] // 业务逻辑步骤
+  }
+
+  // API参数接口
+  interface ApiDocParam {
+    name: string // 参数名称
+    type: string // 参数类型
+    required: boolean // 是否必填
+    description: string // 参数说明
+  }
+
+  // API错误码接口
+  interface ApiErrorCode {
+    code: string | number // 错误码
+    message: string // 错误信息
+    description: string // 错误说明
+  }
+}
+```
+
+#### 组件开发规范
+
+1. **组件命名**:
+   - 路由name:`SystemApiDoc{ModuleName}`
+   - defineOptions name:与路由name一致
+   - 文件名:index.vue
+
+2. **数据组织**:
+   - 使用ref或reactive定义API文档数据
+   - 变量命名:`{module}ApiDocs`,如 `authApiDocs`
+
+3. **UI组件使用**:
+   - 使用ElCard包裹每个API接口文档
+   - 使用ElTable展示参数列表和错误码表
+   - 使用ElTag标记请求方法:
+     - GET: type="success"
+     - POST: type="primary"
+     - PUT: type="warning"
+     - DELETE: type="danger"
+   - 使用ElDivider分隔不同接口
+
+4. **样式规范**:
+   - 页面容器:使用 `art-full-height` 类
+   - 代码块样式:
+     ```html
+     <pre class="bg-g-200 border-full-d rounded-md p-4 overflow-x-auto">
+       <code class="font-mono text-xs leading-[1.5]">{{ jsonExample }}</code>
+     </pre>
+     ```
+
+5. **国际化配置**:
+   - 在 `/src/locales/langs/zh.json` 中添加:
+     ```json
+     {
+       "menus": {
+         "systemDashboard": {
+           "apiDocs": {
+             "title": "API文档",
+             "auth": "认证模块",
+             "user": "用户管理",
+             "role": "角色管理"
+           }
+         }
+       }
+     }
+     ```
+
+#### 路由配置
+
+在 `src/router/modules/system-dashboard.ts` 中添加:
+
+```typescript
+{
+  path: 'api-docs',
+  name: 'SystemApiDocs',
+  component: '',  // 空字符串,仅作为菜单容器
+  meta: {
+    title: 'menus.systemDashboard.apiDocs.title',
+    icon: 'ri:file-list-3-line',
+    roles: ['R_SUPER'],
+    keepAlive: true
+  },
+  children: [
+    {
+      path: 'auth',
+      name: 'SystemApiDocAuth',
+      component: '/system/dashboard/api-docs/auth',
+      meta: {
+        title: 'menus.systemDashboard.apiDocs.auth',
+        icon: 'ri:shield-keyhole-line',
+        roles: ['R_SUPER'],
+        keepAlive: true
+      }
+    },
+    {
+      path: 'user',
+      name: 'SystemApiDocUser',
+      component: '/system/dashboard/api-docs/user',
+      meta: {
+        title: 'menus.systemDashboard.apiDocs.user',
+        icon: 'ri:user-line',
+        roles: ['R_SUPER'],
+        keepAlive: true
+      }
+    },
+    {
+      path: 'role',
+      name: 'SystemApiDocRole',
+      component: '/system/dashboard/api-docs/role',
+      meta: {
+        title: 'menus.systemDashboard.apiDocs.role',
+        icon: 'ri:user-settings-line',
+        roles: ['R_SUPER'],
+        keepAlive: true
+      }
+    }
+  ]
+}
+```
+
+#### 实施步骤
+
+**阶段1:准备工作**
+
+- 在 `src/types/api/api.d.ts` 中添加TypeScript类型定义
+- 在 `src/locales/langs/zh.json` 和 `en.json` 中添加国际化配置
+- 在 `src/router/modules/system-dashboard.ts` 中添加路由配置
+
+**阶段2:创建组件目录**
+
+- 创建 `src/views/system/dashboard/api-docs/` 目录
+- 在该目录下创建三个子目录:auth/、user/、role/
+- 每个子目录下创建 index.vue 文件
+
+**阶段3:编写API文档组件**
+
+- 按照模块顺序依次编写三个模块的组件
+- 每个组件包含:
+  - 模块标题和描述
+  - API接口列表(按照本文档的结构)
+  - 每个接口的完整文档内容
+
+**阶段4:测试验证**
+
+- 使用R_SUPER角色登录,验证菜单显示
+- 访问每个模块,检查内容渲染
+- 使用R_ADMIN或R_USER角色登录,确认菜单不可见
+- 检查响应式布局在不同屏幕尺寸下的表现
+
+**阶段5:优化增强**
+
+- 添加代码复制功能
+- 添加页面内锚点导航
+- 优化移动端展示
+
+### 注意事项
+
+1. **内容优先级**:
+   - 所有涉及本文档中已定义的API接口,以本文档内容为准
+   - 如果 `add-api-doc-menu-item.md` 中已有的接口与本文档冲突,应更新为本文档的描述
+
+2. **权限控制**:
+   - 所有API文档页面仅对 R_SUPER 角色可见
+   - 路由配置中必须设置 `meta.roles: ['R_SUPER']`
+
+3. **样式统一**:
+   - 使用 Element Plus 组件
+   - 遵循项目现有样式规范
+   - 请求方法使用 ElTag 并根据方法类型显示不同颜色:
+     - GET: success (绿色)
+     - POST: primary (蓝色)
+     - PUT: warning (橙色)
+     - DELETE: danger (红色)
+
+4. **代码示例格式**:
+   - 使用 `<pre><code>` 标签
+   - JSON示例需要格式化(缩进2个空格)
+   - 敏感信息使用占位符(如 Token 使用 "eyJ...")
+
+5. **国际化配置**:
+   - 菜单标题必须使用国际化Key
+   - 需要在 `/src/locales/langs/zh.json` 和 `/src/locales/langs/en.json` 中添加对应翻译
+
+### API接口清单
+
+以下是本文档中定义的所有API接口,需要集成到API文档系统:
+
+**认证模块** (6个接口):
+
+- [ ] POST /api/auth/login - 用户登录
+- [ ] GET /api/user/info - 获取用户信息
+- [ ] POST /api/auth/refresh-token - 刷新Token
+- [ ] POST /api/auth/logout - 用户登出
+- [ ] POST /api/auth/register - 用户注册
+- [ ] GET /api/auth/check-username - 检查用户名是否存在
+
+**用户管理模块** (11个接口):
+
+- [ ] GET /api/user/list - 获取用户列表
+- [ ] GET /api/user/profile - 获取用户详情
+- [ ] PUT /api/user/profile - 更新用户信息
+- [ ] POST /api/user/change-password - 修改密码
+- [ ] POST /api/user/tags - 更新用户标签
+- [ ] POST /api/user/avatar - 上传用户头像
+- [ ] POST /api/user - 创建用户
+- [ ] PUT /api/user/{id} - 更新用户
+- [ ] DELETE /api/user/{id} - 删除用户
+
+**角色管理模块** (4个接口):
+
+- [ ] GET /api/role/list - 获取角色列表
+- [ ] POST /api/role - 创建角色
+- [ ] PUT /api/role/{id} - 更新角色
+- [ ] DELETE /api/role/{id} - 删除角色
+
+**接口总计**: 21个
+
+### 后续工作
+
+1. 根据本文档的API接口设计,创建或更新对应的API文档页面组件
+2. 确保每个接口文档包含完整的请求/响应示例和参数说明
+3. 添加代码复制功能,方便开发者复制请求/响应示例
+4. 添加页面内锚点导航,快速跳转到对应API接口
+5. 测试验证权限控制,确保R_SUPER角色可访问,其他角色不可见
