@@ -50,6 +50,7 @@
   import UserDialog from './modules/user-dialog.vue'
   import { ElTag, ElMessageBox, ElImage } from 'element-plus'
   import { DialogType } from '@/types'
+  import { formatDateTime } from '@/utils/date'
 
   defineOptions({ name: 'User' })
 
@@ -150,6 +151,25 @@
         },
         { prop: 'userPhone', label: '手机号' },
         {
+          prop: 'userRoles',
+          label: '角色',
+          width: 120,
+          formatter: (row) => {
+            // 显示角色数组，多个角色用逗号分隔
+            if (Array.isArray(row.userRoles) && row.userRoles.length > 0) {
+              // 将角色编码转换为显示名称
+              const roleNameMap: Record<string, string> = {
+                R_SUPER: '超级管理员',
+                R_ADMIN: '管理员',
+                R_USER: '普通用户'
+              }
+              const roleNames = row.userRoles.map((code) => roleNameMap[code] || code)
+              return h(ElTag, { type: 'primary', size: 'small' }, () => roleNames.join(', '))
+            }
+            return h(ElTag, { type: 'info', size: 'small' }, () => '未设置')
+          }
+        },
+        {
           prop: 'status',
           label: '状态',
           formatter: (row) => {
@@ -160,7 +180,8 @@
         {
           prop: 'createTime',
           label: '创建日期',
-          sortable: true
+          sortable: true,
+          formatter: (row) => formatDateTime(row.createTime)
         },
         {
           prop: 'operation',

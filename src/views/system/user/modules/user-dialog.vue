@@ -40,9 +40,8 @@
 
 <script setup lang="ts">
   import { ElMessage } from 'element-plus'
-  import { ROLE_LIST_DATA } from '@/mock/temp/formData'
   import type { FormInstance, FormRules } from 'element-plus'
-  import { fetchCreateUser, fetchUpdateUser } from '@/api/system-manage'
+  import { fetchCreateUser, fetchUpdateUser, fetchGetRoleList } from '@/api/system-manage'
 
   interface Props {
     visible: boolean
@@ -58,8 +57,24 @@
   const props = defineProps<Props>()
   const emit = defineEmits<Emits>()
 
-  // 角色列表数据
-  const roleList = ref(ROLE_LIST_DATA)
+  // 角色列表数据（从接口获取）
+  const roleList = ref<Api.SystemManage.RoleListItem[]>([])
+
+  // 获取角色列表
+  const loadRoleList = async () => {
+    try {
+      const res = await fetchGetRoleList({ current: 1, size: 100 })
+      roleList.value = res.records || []
+    } catch (error) {
+      console.error('获取角色列表失败:', error)
+      ElMessage.error('获取角色列表失败')
+    }
+  }
+
+  // 组件挂载时加载角色列表
+  onMounted(() => {
+    loadRoleList()
+  })
 
   // 对话框显示控制
   const dialogVisible = computed({

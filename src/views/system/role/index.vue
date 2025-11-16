@@ -64,6 +64,7 @@
   import RoleEditDialog from './modules/role-edit-dialog.vue'
   import RolePermissionDialog from './modules/role-permission-dialog.vue'
   import { ElTag, ElMessageBox, ElMessage } from 'element-plus'
+  import { formatDateTime } from '@/utils/date'
 
   defineOptions({ name: 'Role' })
 
@@ -147,7 +148,8 @@
           prop: 'createTime',
           label: '创建日期',
           width: 180,
-          sortable: true
+          sortable: true,
+          formatter: (row) => formatDateTime(row.createTime)
         },
         {
           prop: 'operation',

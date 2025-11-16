@@ -138,6 +138,7 @@ declare namespace Api {
       description: string
       enabled: boolean
       createTime: string
+      updateTime: string
     }
 
     /** 角色搜索参数 */
@@ -152,6 +153,7 @@ declare namespace Api {
       roleCode: string
       description: string
       enabled: boolean
+      dashboardPath?: string
     }
 
     /** 更新角色参数 */
@@ -160,6 +162,7 @@ declare namespace Api {
       roleCode: string
       description: string
       enabled: boolean
+      dashboardPath?: string
     }
   }
 

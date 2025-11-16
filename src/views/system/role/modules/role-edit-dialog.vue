@@ -13,6 +13,9 @@
       <ElFormItem label="角色编码" prop="roleCode">
         <ElInput v-model="form.roleCode" placeholder="请输入角色编码" />
       </ElFormItem>
+      <ElFormItem label="控制台路径" prop="dashboardPath">
+        <ElInput v-model="form.dashboardPath" placeholder="请输入控制台路径" />
+      </ElFormItem>
       <ElFormItem label="描述" prop="description">
         <ElInput
           v-model="form.description"
@@ -86,12 +89,14 @@
   /**
    * 表单数据
    */
-  const form = reactive<RoleListItem>({
+  const form = reactive<Partial<RoleListItem> & { dashboardPath?: string }>({
     roleId: 0,
     roleName: '',
     roleCode: '',
     description: '',
+    dashboardPath: '',
     createTime: '',
+    updateTime: '',
     enabled: true
   })
 
@@ -129,7 +134,9 @@
         roleName: '',
         roleCode: '',
         description: '',
+        dashboardPath: '/user/dashboard/console',
         createTime: '',
+        updateTime: '',
         enabled: true
       })
     }
@@ -159,7 +166,8 @@
           roleName: form.roleName,
           roleCode: form.roleCode,
           description: form.description,
-          enabled: form.enabled
+          enabled: form.enabled,
+          dashboardPath: form.dashboardPath
         })
       } else {
         // 调用更新角色API
@@ -172,7 +180,8 @@
           roleName: form.roleName,
           roleCode: form.roleCode,
           description: form.description,
-          enabled: form.enabled
+          enabled: form.enabled,
+          dashboardPath: form.dashboardPath
         })
       }
 

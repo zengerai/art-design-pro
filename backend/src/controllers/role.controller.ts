@@ -10,7 +10,7 @@ export async function getRoleList(req: AuthRequest, res: Response, next: NextFun
   try {
     const { current = 1, size = 20, roleName, roleCode } = req.query
 
-    let query = `SELECT id as roleId, role_name as roleName, role_code as roleCode, description, status as enabled, created_at as createTime FROM roles WHERE 1=1`
+    let query = `SELECT id as roleId, role_name as roleName, role_code as roleCode, description, enabled, created_at as createTime, updated_at as updateTime FROM roles WHERE 1=1`
     const params: any[] = []
 
     if (roleName) {
@@ -50,11 +50,11 @@ export async function getRoleList(req: AuthRequest, res: Response, next: NextFun
 
 export async function createRole(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { roleName, roleCode, description, enabled } = req.body
+    const { roleName, roleCode, description, enabled, dashboardPath } = req.body
 
     const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO roles (role_name, role_code, dashboard_path, description, status, created_at) VALUES (?, ?, '/user/dashboard/console', ?, ?, NOW())`,
-      [roleName, roleCode, description, enabled ? 1 : 0]
+      `INSERT INTO roles (role_name, role_code, dashboard_path, description, enabled, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
+      [roleName, roleCode, dashboardPath || '/user/dashboard/console', description, enabled ? 1 : 0]
     )
 
     res.json({ code: 200, message: '创建成功', data: { roleId: result.insertId } })
@@ -66,12 +66,21 @@ export async function createRole(req: AuthRequest, res: Response, next: NextFunc
 export async function updateRole(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
-    const { roleName, roleCode, description, enabled } = req.body
+    const { roleName, roleCode, description, enabled, dashboardPath } = req.body
 
-    await pool.execute(
-      `UPDATE roles SET role_name=?, role_code=?, description=?, status=? WHERE id=?`,
-      [roleName, roleCode, description, enabled ? 1 : 0, id]
-    )
+    let updateFields = 'role_name=?, role_code=?, description=?, enabled=?'
+    const updateParams: any[] = [roleName, roleCode, description, enabled ? 1 : 0]
+
+    // 如果提供了 dashboardPath，则更新
+    if (dashboardPath !== undefined) {
+      updateFields += ', dashboard_path=?'
+      updateParams.push(dashboardPath)
+    }
+
+    updateFields += ', updated_at=NOW()'
+    updateParams.push(id)
+
+    await pool.execute(`UPDATE roles SET ${updateFields} WHERE id=?`, updateParams)
 
     res.json({ code: 200, message: '更新成功' })
   } catch (error) {
