@@ -315,6 +315,16 @@
       "document": "官方文档",
       "liteVersion": "精简版本",
       "oldVersion": "v2.6.1 版本"
+    },
+    "systemDashboard": {
+      "title": "系统管理工作台",
+      "apiDocs": {
+        "title": "API文档",
+        "auth": "认证模块",
+        "user": "用户管理",
+        "role": "角色管理",
+        "menu": "菜单管理"
+      }
     }
   },
   "table": {

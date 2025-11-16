@@ -24,6 +24,63 @@ export const systemDashboardRoutes: AppRouteRecord = {
         keepAlive: false,
         fixedTab: true
       }
+    },
+    {
+      path: 'api-docs',
+      name: 'SystemApiDocs',
+      component: '',
+      meta: {
+        title: 'menus.systemDashboard.apiDocs.title',
+        icon: 'ri:file-list-3-line',
+        roles: ['R_SUPER'],
+        keepAlive: true
+      },
+      children: [
+        {
+          path: 'auth',
+          name: 'SystemApiDocAuth',
+          component: '/system/dashboard/api-docs/auth',
+          meta: {
+            title: 'menus.systemDashboard.apiDocs.auth',
+            icon: 'ri:shield-keyhole-line',
+            roles: ['R_SUPER'],
+            keepAlive: true
+          }
+        },
+        {
+          path: 'user',
+          name: 'SystemApiDocUser',
+          component: '/system/dashboard/api-docs/user',
+          meta: {
+            title: 'menus.systemDashboard.apiDocs.user',
+            icon: 'ri:user-line',
+            roles: ['R_SUPER'],
+            keepAlive: true
+          }
+        },
+        {
+          path: 'role',
+          name: 'SystemApiDocRole',
+          component: '/system/dashboard/api-docs/role',
+          meta: {
+            title: 'menus.systemDashboard.apiDocs.role',
+            icon: 'ri:user-settings-line',
+            roles: ['R_SUPER'],
+            keepAlive: true
+          }
+        },
+        {
+          path: 'menu',
+          name: 'SystemApiDocMenu',
+          component: '/system/dashboard/api-docs/menu',
+          meta: {
+            title: 'menus.systemDashboard.apiDocs.menu',
+            icon: 'ri:menu-line',
+            roles: ['R_SUPER'],
+            keepAlive: true
+          }
+        }
+      ]
     }
   ]
 }

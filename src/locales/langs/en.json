@@ -315,6 +315,16 @@
       "document": "Document",
       "liteVersion": "Lite Version",
       "oldVersion": "v2.6.1 Version"
+    },
+    "systemDashboard": {
+      "title": "System Dashboard",
+      "apiDocs": {
+        "title": "API Documentation",
+        "auth": "Authentication",
+        "user": "User Management",
+        "role": "Role Management",
+        "menu": "Menu Management"
+      }
     }
   },
   "table": {
