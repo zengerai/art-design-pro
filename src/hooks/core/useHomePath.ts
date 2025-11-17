@@ -2,6 +2,7 @@
  * 首页路径管理组合式函数
  *
  * 根据用户角色动态计算和管理首页路径
+ * 优先使用后端返回的 dashboardPath，否则使用默认角色路径映射
  *
  * @module hooks/core/useHomePath
  */
@@ -41,9 +42,15 @@ export function useHomePath() {
 
   /**
    * 响应式首页路径
-   * 根据用户角色自动计算
+   * 优先使用后端返回的 dashboardPath，否则根据用户角色自动计算
    */
   const homePath: ComputedRef<string> = computed(() => {
+    // 优先使用后端返回的 dashboardPath
+    if (userStore.dashboardPath) {
+      return userStore.dashboardPath
+    }
+
+    // 否则使用默认的角色路径映射
     const roles = userStore.getUserInfo.roles as UserRole[] | undefined
     return getHomePathByRoles(roles)
   })

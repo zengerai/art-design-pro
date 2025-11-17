@@ -220,7 +220,7 @@
       // 登录请求
       const { username, password } = formData
 
-      const { token, refreshToken } = await fetchLogin({
+      const { token, refreshToken, dashboardPath } = await fetchLogin({
         userName: username,
         password
       })
@@ -230,8 +230,8 @@
         throw new Error('Login failed - no token received')
       }
 
-      // 存储 token 和登录状态
-      userStore.setToken(token, refreshToken)
+      // 存储 token、控制台路径 和登录状态
+      userStore.setToken(token, refreshToken, dashboardPath)
       userStore.setLoginStatus(true)
 
       // 登录成功处理
