@@ -26,7 +26,7 @@ export async function getMenuList(req: AuthRequest, res: Response, next: NextFun
       returnTree = 'true'
     } = req.query
 
-    const isTreeMode = returnTree === 'true' || returnTree === true
+    const isTreeMode = returnTree === 'true'
 
     let query = `
       SELECT 
@@ -214,23 +214,23 @@ export async function createMenu(req: AuthRequest, res: Response, next: NextFunc
   try {
     // 权限验证：仅管理员可操作
     if (req.user?.role !== 'admin') {
-      throw createError(403, '无权限执行此操作')
+      throw createError('无权限执行此操作', 403)
     }
 
     const { roles, ...menuData } = req.body
 
     // 必填字段验证
     if (!menuData.menuType || !menuData.name || !menuData.title) {
-      throw createError(400, '缺少必填字段：menuType, name, title')
+      throw createError('缺少必填字段：menuType, name, title', 400)
     }
 
-    // 唯一性检查
+    // 唐一性检查
     const [existingMenu] = await connection.execute<RowDataPacket[]>(
       'SELECT id FROM menus WHERE name = ?',
       [menuData.name]
     )
     if (existingMenu.length > 0) {
-      throw createError(400, `菜单名称 ${menuData.name} 已存在`)
+      throw createError(`菜单名称 ${menuData.name} 已存在`, 400)
     }
 
     // 数据转换
@@ -279,7 +279,7 @@ export async function updateMenu(req: AuthRequest, res: Response, next: NextFunc
   try {
     // 权限验证
     if (req.user?.role !== 'admin') {
-      throw createError(403, '无权限执行此操作')
+      throw createError('无权限执行此操作', 403)
     }
 
     const menuId = parseInt(req.params.id, 10)
@@ -291,7 +291,7 @@ export async function updateMenu(req: AuthRequest, res: Response, next: NextFunc
       [menuId]
     )
     if (existing.length === 0) {
-      throw createError(404, '菜单不存在')
+      throw createError('菜单不存在', 404)
     }
 
     // 如果修改了name，检查唯一性
@@ -301,7 +301,7 @@ export async function updateMenu(req: AuthRequest, res: Response, next: NextFunc
         [menuData.name, menuId]
       )
       if (duplicate.length > 0) {
-        throw createError(400, `菜单名称 ${menuData.name} 已存在`)
+        throw createError(`菜单名称 ${menuData.name} 已存在`, 400)
       }
     }
 
@@ -351,7 +351,7 @@ export async function deleteMenu(req: AuthRequest, res: Response, next: NextFunc
   try {
     // 权限验证
     if (req.user?.role !== 'admin') {
-      throw createError(403, '无权限执行此操作')
+      throw createError('无权限执行此操作', 403)
     }
 
     const menuId = parseInt(req.params.id, 10)
@@ -362,7 +362,7 @@ export async function deleteMenu(req: AuthRequest, res: Response, next: NextFunc
       [menuId]
     )
     if (existing.length === 0) {
-      throw createError(404, '菜单不存在')
+      throw createError('菜单不存在', 404)
     }
 
     await connection.beginTransaction()

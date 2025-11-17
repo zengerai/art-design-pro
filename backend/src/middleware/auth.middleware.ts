@@ -4,8 +4,10 @@ import { createError } from './error.middleware.js'
 
 export interface AuthRequest extends Request {
   user?: {
+    id: number
     userId: number
     username: string
+    role: string
     roleCode: string
   }
 }
@@ -25,8 +27,10 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     const decoded = verifyToken(token)
 
     req.user = {
+      id: decoded.userId,
       userId: decoded.userId,
       username: decoded.username,
+      role: decoded.roleCode,
       roleCode: decoded.roleCode
     }
 

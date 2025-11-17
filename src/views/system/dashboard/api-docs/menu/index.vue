@@ -177,29 +177,41 @@
       requestExample: `GET /api/menus?mode=tree&enabledOnly=false
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       responseFields: [
-        { name: 'code', type: 'number', description: '响应码' },
-        { name: 'data', type: 'array', description: '菜单树数组' },
-        { name: 'data[].id', type: 'number', description: '菜单ID' },
-        { name: 'data[].parentId', type: 'number', description: '父菜单ID' },
-        { name: 'data[].name', type: 'string', description: '路由名称（唯一标识）' },
-        { name: 'data[].path', type: 'string', description: '路由路径' },
-        { name: 'data[].component', type: 'string', description: '组件路径' },
+        { name: 'code', type: 'number', required: false, description: '响应码' },
+        { name: 'data', type: 'array', required: false, description: '菜单树数组' },
+        { name: 'data[].id', type: 'number', required: false, description: '菜单ID' },
+        { name: 'data[].parentId', type: 'number', required: false, description: '父菜单ID' },
+        {
+          name: 'data[].name',
+          type: 'string',
+          required: false,
+          description: '路由名称（唐一标识）'
+        },
+        { name: 'data[].path', type: 'string', required: false, description: '路由路径' },
+        { name: 'data[].component', type: 'string', required: false, description: '组件路径' },
         {
           name: 'data[].menuType',
           type: 'string',
+          required: false,
           description: '菜单类型：menu-菜单，button-按钮'
         },
-        { name: 'data[].title', type: 'string', description: '菜单标题' },
-        { name: 'data[].icon', type: 'string', description: '图标名称' },
-        { name: 'data[].sort', type: 'number', description: '排序号' },
-        { name: 'data[].enabled', type: 'boolean', description: '启用状态' },
-        { name: 'data[].roles', type: 'string[]', description: '关联的角色编码列表' },
-        { name: 'data[].createdAt', type: 'string', description: '创建时间' },
-        { name: 'data[].updatedAt', type: 'string', description: '更新时间' },
-        { name: 'data[].children', type: 'array', description: '子菜单数组' },
+        { name: 'data[].title', type: 'string', required: false, description: '菜单标题' },
+        { name: 'data[].icon', type: 'string', required: false, description: '图标名称' },
+        { name: 'data[].sort', type: 'number', required: false, description: '排序号' },
+        { name: 'data[].enabled', type: 'boolean', required: false, description: '启用状态' },
+        {
+          name: 'data[].roles',
+          type: 'string[]',
+          required: false,
+          description: '关联的角色编码列表'
+        },
+        { name: 'data[].createdAt', type: 'string', required: false, description: '创建时间' },
+        { name: 'data[].updatedAt', type: 'string', required: false, description: '更新时间' },
+        { name: 'data[].children', type: 'array', required: false, description: '子菜单数组' },
         {
           name: 'data[].meta.authList',
           type: 'array',
+          required: false,
           description: '权限按钮列表（仅button类型）'
         }
       ],
@@ -274,16 +286,21 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       requestExample: `GET /api/menus/1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       responseFields: [
-        { name: 'code', type: 'number', description: '响应码' },
-        { name: 'data', type: 'object', description: '菜单详情对象' },
-        { name: 'data.id', type: 'number', description: '菜单ID' },
-        { name: 'data.parentId', type: 'number', description: '父菜单ID' },
-        { name: 'data.menuType', type: 'string', description: 'menu或button' },
-        { name: 'data.name', type: 'string', description: '路由名称' },
-        { name: 'data.title', type: 'string', description: '菜单标题' },
-        { name: 'data.roles', type: 'string[]', description: '关联的角色编码数组' },
-        { name: 'data.enabled', type: 'boolean', description: '启用状态' },
-        { name: 'data...', type: 'any', description: '其他菜单属性字段' }
+        { name: 'code', type: 'number', required: false, description: '响应码' },
+        { name: 'data', type: 'object', required: false, description: '菜单详情对象' },
+        { name: 'data.id', type: 'number', required: false, description: '菜单ID' },
+        { name: 'data.parentId', type: 'number', required: false, description: '父菜单ID' },
+        { name: 'data.menuType', type: 'string', required: false, description: 'menu或button' },
+        { name: 'data.name', type: 'string', required: false, description: '路由名称' },
+        { name: 'data.title', type: 'string', required: false, description: '菜单标题' },
+        {
+          name: 'data.roles',
+          type: 'string[]',
+          required: false,
+          description: '关联的角色编码数组'
+        },
+        { name: 'data.enabled', type: 'boolean', required: false, description: '启用状态' },
+        { name: 'data...', type: 'any', required: false, description: '其他菜单属性字段' }
       ],
       responseExample: `{
   "code": 200,
@@ -361,10 +378,10 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
   "roles": [1, 2]
 }`,
       responseFields: [
-        { name: 'code', type: 'number', description: '响应码' },
-        { name: 'message', type: 'string', description: '提示信息' },
-        { name: 'data', type: 'object', description: '返回数据' },
-        { name: 'data.id', type: 'number', description: '新创建的菜单ID' }
+        { name: 'code', type: 'number', required: false, description: '响应码' },
+        { name: 'message', type: 'string', required: false, description: '提示信息' },
+        { name: 'data', type: 'object', required: false, description: '返回数据' },
+        { name: 'data.id', type: 'number', required: false, description: '新创建的菜单ID' }
       ],
       responseExample: `{
   "code": 201,
@@ -422,8 +439,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
   "roles": [1]
 }`,
       responseFields: [
-        { name: 'code', type: 'number', description: '响应码' },
-        { name: 'message', type: 'string', description: '提示信息' }
+        { name: 'code', type: 'number', required: false, description: '响应码' },
+        { name: 'message', type: 'string', required: false, description: '提示信息' }
       ],
       responseExample: `{
   "code": 200,
@@ -461,8 +478,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       requestExample: `DELETE /api/menus/1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       responseFields: [
-        { name: 'code', type: 'number', description: '响应码' },
-        { name: 'message', type: 'string', description: '提示信息' }
+        { name: 'code', type: 'number', required: false, description: '响应码' },
+        { name: 'message', type: 'string', required: false, description: '提示信息' }
       ],
       responseExample: `{
   "code": 200,
@@ -498,8 +515,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       requestExample: `GET /api/role/3/menus
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       responseFields: [
-        { name: 'code', type: 'number', description: '响应码' },
-        { name: 'data', type: 'number[]', description: '菜单ID数组' }
+        { name: 'code', type: 'number', required: false, description: '响应码' },
+        { name: 'data', type: 'number[]', required: false, description: '菜单ID数组' }
       ],
       responseExample: `{
   "code": 200,
@@ -537,8 +554,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
   "menuIds": [1, 2, 7, 17]
 }`,
       responseFields: [
-        { name: 'code', type: 'number', description: '响应码' },
-        { name: 'message', type: 'string', description: '提示信息' }
+        { name: 'code', type: 'number', required: false, description: '响应码' },
+        { name: 'message', type: 'string', required: false, description: '提示信息' }
       ],
       responseExample: `{
   "code": 200,
