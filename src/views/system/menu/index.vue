@@ -55,8 +55,7 @@
   import { useTableColumns } from '@/hooks/core/useTableColumns'
   import type { AppRouteRecord } from '@/types/router'
   import MenuDialog from './modules/menu-dialog.vue'
-  import { fetchGetMenuList } from '@/api/system-manage'
-  import { ElTag, ElMessageBox } from 'element-plus'
+  import { ElTag, ElMessageBox, ElMessage } from 'element-plus'
 
   defineOptions({ name: 'Menus' })
 
@@ -101,13 +100,15 @@
 
   /**
    * 获取菜单列表数据
+   * 注意：当前后端菜单接口尚未实现，使用模拟数据
    */
   const getMenuList = async (): Promise<void> => {
     loading.value = true
 
     try {
-      const list = await fetchGetMenuList()
-      tableData.value = list
+      // TODO: 后端菜单接口尚未实现，暂时返回空数组
+      ElMessage.warning('后端菜单接口尚未实现，请在设置中切换为前端模式')
+      tableData.value = []
     } catch (error) {
       throw error instanceof Error ? error : new Error('获取菜单失败')
     } finally {

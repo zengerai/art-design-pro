@@ -234,6 +234,8 @@ declare namespace Api {
   namespace ApiDoc {
     /** API文档项接口 */
     interface ApiDocItem {
+      /** API唯一标识，用于锚点导航 */
+      id: string
       /** 接口名称 */
       name: string
       /** 接口描述 */

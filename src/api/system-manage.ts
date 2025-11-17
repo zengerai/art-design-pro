@@ -1,5 +1,4 @@
 import request from '@/utils/http'
-import { AppRouteRecord } from '@/types/router'
 
 // 获取用户列表
 export function fetchGetUserList(params: Api.SystemManage.UserSearchParams) {
@@ -66,12 +65,5 @@ export function fetchDeleteRole(id: number) {
   return request.del({
     url: `/api/role/${id}`,
     showSuccessMessage: true
-  })
-}
-
-// 获取菜单列表
-export function fetchGetMenuList() {
-  return request.get<AppRouteRecord[]>({
-    url: '/api/v3/system/menus'
   })
 }

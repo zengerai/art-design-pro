@@ -1,119 +1,139 @@
 <template>
   <div class="api-docs-container art-full-height overflow-y-auto p-4">
-    <ElPageHeader content="用户管理模块 API 文档" />
+    <ElPageHeader content="用户管理模块 API 文档" class="mb-4" />
 
-    <ElAlert class="mt-4" type="info" :closable="false">
-      <template #title>
-        <div class="space-y-1">
-          <div>本模块包含11个API接口，分为两类：</div>
-          <div>• 个人中心接口（5个）：当前用户管理自己的信息 - 权限：当前用户</div>
-          <div>• 用户管理接口（4个）：系统管理员管理所有用户 - 权限：R_SUPER</div>
-        </div>
-      </template>
-    </ElAlert>
-
-    <div class="mt-6 space-y-6">
-      <!-- API接口列表 -->
-      <ElCard v-for="api in userApiDocs" :key="api.name" shadow="hover">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <ElTag :type="getMethodType(api.method)" size="large">{{ api.method }}</ElTag>
-              <span class="text-lg font-semibold">{{ api.name }}</span>
+    <ElRow :gutter="20">
+      <!-- 左侧锚点导航 -->
+      <ElCol :xs="0" :sm="5" :md="5" :lg="4" :xl="4">
+        <ElAffix :offset="80">
+          <ElCard shadow="hover" class="anchor-nav-card">
+            <template #header>
+              <div class="text-sm font-semibold">接口导航</div>
+            </template>
+            <div class="anchor-list">
+              <div
+                v-for="api in userApiDocs"
+                :key="api.id"
+                class="anchor-item"
+                @click="scrollToApi(api.id)"
+              >
+                {{ api.name }}
+              </div>
             </div>
-            <code class="text-sm text-gray-600">{{ api.path }}</code>
+          </ElCard>
+        </ElAffix>
+      </ElCol>
+
+      <!-- 右侧API内容 -->
+      <ElCol :xs="24" :sm="19" :md="19" :lg="20" :xl="20">
+        <div class="space-y-6">
+          <!-- API接口列表 -->
+          <div v-for="api in userApiDocs" :id="api.id" :key="api.id">
+            <ElCard shadow="hover" class="api-card">
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-3">
+                    <ElTag :type="getMethodType(api.method)" size="large">{{ api.method }}</ElTag>
+                    <span class="text-lg font-semibold">{{ api.name }}</span>
+                  </div>
+                  <code class="text-sm text-gray-600">{{ api.path }}</code>
+                </div>
+              </template>
+
+              <!-- 接口描述 -->
+              <div class="mb-4">
+                <h4 class="text-base font-medium mb-2">接口描述</h4>
+                <p class="text-gray-600">{{ api.description }}</p>
+              </div>
+
+              <!-- 请求头 -->
+              <div v-if="api.headers && api.headers.length" class="mb-4">
+                <h4 class="text-base font-medium mb-2">请求头</h4>
+                <ElTable :data="api.headers" border size="small">
+                  <ElTableColumn prop="name" label="参数名" width="180" />
+                  <ElTableColumn prop="type" label="类型" width="120" />
+                  <ElTableColumn prop="required" label="必填" width="80">
+                    <template #default="{ row }">
+                      <ElTag :type="row.required ? 'danger' : 'info'" size="small">
+                        {{ row.required ? '是' : '否' }}
+                      </ElTag>
+                    </template>
+                  </ElTableColumn>
+                  <ElTableColumn prop="description" label="说明" />
+                </ElTable>
+              </div>
+
+              <!-- 请求参数 -->
+              <div v-if="api.params && api.params.length" class="mb-4">
+                <h4 class="text-base font-medium mb-2">请求参数</h4>
+                <ElTable :data="api.params" border size="small">
+                  <ElTableColumn prop="name" label="参数名" width="180" />
+                  <ElTableColumn prop="type" label="类型" width="120" />
+                  <ElTableColumn prop="required" label="必填" width="80">
+                    <template #default="{ row }">
+                      <ElTag :type="row.required ? 'danger' : 'info'" size="small">
+                        {{ row.required ? '是' : '否' }}
+                      </ElTag>
+                    </template>
+                  </ElTableColumn>
+                  <ElTableColumn prop="description" label="说明" />
+                </ElTable>
+              </div>
+
+              <!-- 请求示例 -->
+              <div class="mb-4">
+                <h4 class="text-base font-medium mb-2">请求示例</h4>
+                <pre
+                  class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto"
+                ><code class="text-sm">{{ api.requestExample }}</code></pre>
+              </div>
+
+              <!-- 响应参数 -->
+              <div v-if="api.responseFields && api.responseFields.length" class="mb-4">
+                <h4 class="text-base font-medium mb-2">响应参数</h4>
+                <ElTable :data="api.responseFields" border size="small">
+                  <ElTableColumn prop="name" label="参数名" width="180" />
+                  <ElTableColumn prop="type" label="类型" width="120" />
+                  <ElTableColumn prop="description" label="说明" />
+                </ElTable>
+              </div>
+
+              <!-- 响应示例 -->
+              <div class="mb-4">
+                <h4 class="text-base font-medium mb-2">响应示例</h4>
+                <pre
+                  class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto"
+                ><code class="text-sm">{{ api.responseExample }}</code></pre>
+              </div>
+
+              <!-- 错误码 -->
+              <div v-if="api.errorCodes && api.errorCodes.length" class="mb-4">
+                <h4 class="text-base font-medium mb-2">错误码</h4>
+                <ElTable :data="api.errorCodes" border size="small">
+                  <ElTableColumn prop="code" label="错误码" width="120" />
+                  <ElTableColumn prop="message" label="错误信息" width="200" />
+                  <ElTableColumn prop="description" label="说明" />
+                </ElTable>
+              </div>
+
+              <!-- 业务逻辑 -->
+              <div v-if="api.businessLogic && api.businessLogic.length" class="mb-4">
+                <h4 class="text-base font-medium mb-2">业务逻辑</h4>
+                <ol class="list-decimal list-inside space-y-1 text-gray-600">
+                  <li v-for="(logic, index) in api.businessLogic" :key="index">{{ logic }}</li>
+                </ol>
+              </div>
+            </ElCard>
           </div>
-        </template>
-
-        <!-- 接口描述 -->
-        <div class="mb-4">
-          <h4 class="text-base font-medium mb-2">接口描述</h4>
-          <p class="text-gray-600">{{ api.description }}</p>
         </div>
-
-        <!-- 请求头 -->
-        <div v-if="api.headers && api.headers.length" class="mb-4">
-          <h4 class="text-base font-medium mb-2">请求头</h4>
-          <ElTable :data="api.headers" border size="small">
-            <ElTableColumn prop="name" label="参数名" width="180" />
-            <ElTableColumn prop="type" label="类型" width="120" />
-            <ElTableColumn prop="required" label="必填" width="80">
-              <template #default="{ row }">
-                <ElTag :type="row.required ? 'danger' : 'info'" size="small">
-                  {{ row.required ? '是' : '否' }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn prop="description" label="说明" />
-          </ElTable>
-        </div>
-
-        <!-- 请求参数 -->
-        <div v-if="api.params && api.params.length" class="mb-4">
-          <h4 class="text-base font-medium mb-2">请求参数</h4>
-          <ElTable :data="api.params" border size="small">
-            <ElTableColumn prop="name" label="参数名" width="180" />
-            <ElTableColumn prop="type" label="类型" width="120" />
-            <ElTableColumn prop="required" label="必填" width="80">
-              <template #default="{ row }">
-                <ElTag :type="row.required ? 'danger' : 'info'" size="small">
-                  {{ row.required ? '是' : '否' }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn prop="description" label="说明" />
-          </ElTable>
-        </div>
-
-        <!-- 请求示例 -->
-        <div class="mb-4">
-          <h4 class="text-base font-medium mb-2">请求示例</h4>
-          <pre
-            class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto"
-          ><code class="text-sm">{{ api.requestExample }}</code></pre>
-        </div>
-
-        <!-- 响应参数 -->
-        <div v-if="api.responseFields && api.responseFields.length" class="mb-4">
-          <h4 class="text-base font-medium mb-2">响应参数</h4>
-          <ElTable :data="api.responseFields" border size="small">
-            <ElTableColumn prop="name" label="参数名" width="180" />
-            <ElTableColumn prop="type" label="类型" width="120" />
-            <ElTableColumn prop="description" label="说明" />
-          </ElTable>
-        </div>
-
-        <!-- 响应示例 -->
-        <div class="mb-4">
-          <h4 class="text-base font-medium mb-2">响应示例</h4>
-          <pre
-            class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto"
-          ><code class="text-sm">{{ api.responseExample }}</code></pre>
-        </div>
-
-        <!-- 错误码 -->
-        <div v-if="api.errorCodes && api.errorCodes.length" class="mb-4">
-          <h4 class="text-base font-medium mb-2">错误码</h4>
-          <ElTable :data="api.errorCodes" border size="small">
-            <ElTableColumn prop="code" label="错误码" width="120" />
-            <ElTableColumn prop="message" label="错误信息" width="200" />
-            <ElTableColumn prop="description" label="说明" />
-          </ElTable>
-        </div>
-
-        <!-- 业务逻辑 -->
-        <div v-if="api.businessLogic && api.businessLogic.length" class="mb-4">
-          <h4 class="text-base font-medium mb-2">业务逻辑</h4>
-          <ol class="list-decimal list-inside space-y-1 text-gray-600">
-            <li v-for="(logic, index) in api.businessLogic" :key="index">{{ logic }}</li>
-          </ol>
-        </div>
-      </ElCard>
-    </div>
+      </ElCol>
+    </ElRow>
   </div>
 </template>
 
 <script setup lang="ts">
+  import { ref } from 'vue'
+
   defineOptions({ name: 'SystemApiDocUser' })
 
   type ApiDocItem = Api.ApiDoc.ApiDocItem
@@ -122,6 +142,7 @@
   const userApiDocs = ref<ApiDocItem[]>([
     // === 个人中心接口 ===
     {
+      id: 'profile-get',
       name: '获取用户详情',
       description: '获取当前登录用户的完整个人信息，包括基本信息、角色信息和标签列表',
       path: '/api/user/profile',
@@ -172,6 +193,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       ]
     },
     {
+      id: 'profile-update',
       name: '更新用户信息',
       description: '更新当前登录用户的个人信息',
       path: '/api/user/profile',
@@ -215,6 +237,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       ]
     },
     {
+      id: 'change-password',
       name: '修改密码',
       description: '修改当前用户的登录密码',
       path: '/api/user/change-password',
@@ -249,6 +272,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       ]
     },
     {
+      id: 'update-tags',
       name: '更新用户标签',
       description: '更新当前用户的个性化标签，支持批量替换',
       path: '/api/user/tags',
@@ -272,6 +296,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       ]
     },
     {
+      id: 'upload-avatar',
       name: '上传用户头像',
       description: '上传并更新当前用户的头像，multipart/form-data格式',
       path: '/api/user/avatar',
@@ -306,6 +331,7 @@ file: [图片文件]`,
     },
     // === 用户管理接口 ===
     {
+      id: 'user-list',
       name: '获取用户列表',
       description: '分页获取系统中所有用户的列表，支持搜索和排序。仅超级管理员可访问',
       path: '/api/user/list',
@@ -403,6 +429,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       ]
     },
     {
+      id: 'user-create',
       name: '创建用户',
       description: '创建新用户账号，仅超级管理员可操作',
       path: '/api/user',
@@ -481,6 +508,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
       ]
     },
     {
+      id: 'user-update',
       name: '更新用户',
       description: '更新指定用户的信息，仅超级管理员可操作',
       path: '/api/user/{id}',
@@ -537,6 +565,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
       ]
     },
     {
+      id: 'user-delete',
       name: '删除用户',
       description: '删除指定用户，仅超级管理员可操作。注意：不能删除自己',
       path: '/api/user/{id}',
@@ -591,10 +620,69 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
     }
     return typeMap[method] || 'info'
   }
+
+  // 滚动到指定API
+  const scrollToApi = (id: string) => {
+    const element = document.getElementById(id)
+    if (element) {
+      // 直接使用 scrollIntoView，并设置适当的 block 位置
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })
+    }
+  }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
   .api-docs-container {
+    max-width: 1600px;
+    margin: 0 auto;
     background: var(--el-bg-color-page);
+  }
+
+  .anchor-nav-card {
+    :deep(.el-card__header) {
+      padding: 12px 16px;
+      background: var(--el-fill-color-light);
+    }
+
+    :deep(.el-card__body) {
+      padding: 12px;
+    }
+
+    .anchor-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .anchor-item {
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--el-text-color-regular);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+
+      &:hover {
+        color: var(--el-color-primary);
+        background: var(--el-fill-color-light);
+      }
+    }
+  }
+
+  .api-card {
+    scroll-margin-top: 120px;
+  }
+
+  pre {
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 1.5;
+  }
+
+  code {
+    word-wrap: break-word;
+    white-space: pre-wrap;
   }
 </style>

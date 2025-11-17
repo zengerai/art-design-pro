@@ -10,7 +10,6 @@
 import type { AppRouteRecord } from '@/types/router'
 import { useUserStore } from '@/store/modules/user'
 import { useAppMode } from '@/hooks/core/useAppMode'
-import { fetchGetMenuList } from '@/api/system-manage'
 import { asyncRoutes } from '../routes/asyncRoutes'
 import { RoutesAlias } from '../routesAlias'
 import { formatMenuTitle } from '@/utils'
@@ -55,10 +54,11 @@ export class MenuProcessor {
 
   /**
    * 处理后端控制模式的菜单
+   * 注意：当前后端菜单接口尚未实现，默认返回空数组
    */
   private async processBackendMenu(): Promise<AppRouteRecord[]> {
-    const list = await fetchGetMenuList()
-    return this.filterEmptyMenus(list)
+    console.warn('后端菜单接口尚未实现，请使用前端模式或实现后端接口')
+    return []
   }
 
   /**
