@@ -14,7 +14,6 @@
         show-checkbox
         node-key="name"
         :default-expand-all="isExpandAll"
-        :default-checked-keys="[1, 2, 3]"
         :props="defaultProps"
         @check="handleTreeCheck"
       >
@@ -41,12 +40,12 @@
 </template>
 
 <script setup lang="ts">
-  import { useMenuStore } from '@/store/modules/menu'
   import { formatMenuTitle } from '@/utils/router'
-  import { fetchGetRoleMenus, fetchUpdateRoleMenus } from '@/api/system-manage'
+  import { fetchGetRoleMenus, fetchUpdateRoleMenus, fetchGetMenuTree } from '@/api/system-manage'
   import { ElMessage } from 'element-plus'
 
   type RoleListItem = Api.SystemManage.RoleListItem
+  type MenuTreeItem = Api.SystemManage.MenuTreeItem
 
   interface Props {
     modelValue: boolean
@@ -65,10 +64,12 @@
 
   const emit = defineEmits<Emits>()
 
-  const { menuList } = storeToRefs(useMenuStore())
+  // 使用数据库菜单数据代替 menuStore
+  const dbMenuList = ref<MenuTreeItem[]>([])
   const treeRef = ref()
   const isExpandAll = ref(true)
   const isSelectAll = ref(false)
+  const loading = ref(false)
 
   /**
    * 弹窗显示状态双向绑定
@@ -127,7 +128,7 @@
       return processed
     }
 
-    return (menuList.value as any[]).map(processNode)
+    return dbMenuList.value.map(processNode)
   })
 
   /**
@@ -146,10 +147,18 @@
     async (newVal) => {
       if (newVal && props.roleData) {
         try {
-          // 获取角色已有的菜单权限ID
-          const menuIds = await fetchGetRoleMenus(props.roleData.roleId)
+          loading.value = true
+          console.log('🔍 开始加载菜单和权限数据，角色ID:', props.roleData.roleId)
 
-          // 将菜单ID转换为菜单name（因为Tree组件使用name作为key）
+          // 1. 加载数据库菜单数据
+          dbMenuList.value = await fetchGetMenuTree()
+          console.log('📚 菜单数据加载成功，总数:', dbMenuList.value.length)
+
+          // 2. 获取角色已有的菜单权限ID
+          const menuIds = await fetchGetRoleMenus(props.roleData.roleId)
+          console.log('📥 从服务器获取的菜单ID:', menuIds)
+
+          // 3. 将菜单ID转换为菜单name（因为Tree组件使用name作为key）
           const menuNames: string[] = []
           const findMenuName = (nodes: any[], id: number): string | null => {
             for (const node of nodes) {
@@ -165,22 +174,45 @@
           }
 
           for (const id of menuIds) {
-            const name = findMenuName(menuList.value as any[], id)
+            const name = findMenuName(dbMenuList.value, id)
             if (name) {
               menuNames.push(name)
+            } else {
+              console.warn('⚠️ 未找到菜单ID对应的name:', id)
             }
           }
 
-          // 设置树形组件的选中状态
-          nextTick(() => {
-            if (treeRef.value) {
-              treeRef.value.setCheckedKeys(menuNames)
-            }
-          })
+          console.log('🏷️ 转换后的菜单name列表:', menuNames)
+
+          // 4. 等待树组件完全渲染后再设置选中状态
+          await nextTick()
+          await nextTick() // 双重nextTick确保组件完全渲染
+
+          if (treeRef.value) {
+            treeRef.value.setCheckedKeys(menuNames)
+            console.log('✅ 已设置树形组件选中状态')
+
+            // 验证设置结果
+            const actualChecked = treeRef.value.getCheckedKeys()
+            console.log('🔍 实际选中的keys:', actualChecked)
+          } else {
+            console.error('❌ 树形组件引用不存在')
+          }
         } catch (error) {
-          console.error('加载角色权限失败:', error)
-          ElMessage.error('加载权限数据失败')
+          console.error('❌ 加载菜单或权限数据失败:', error)
+          ElMessage.error('加载数据失败')
+        } finally {
+          loading.value = false
         }
+      } else if (!newVal) {
+        // 弹窗关闭时清空选中状态
+        console.log('🔄 弹窗关闭，清空选中状态')
+        // 延迟清空，避免影响保存操作
+        setTimeout(() => {
+          if (treeRef.value) {
+            treeRef.value.setCheckedKeys([])
+          }
+        }, 300)
       }
     }
   )
@@ -190,7 +222,10 @@
    */
   const handleClose = () => {
     visible.value = false
-    treeRef.value?.setCheckedKeys([])
+    // 延迟清空选中状态，避免影响保存操作
+    setTimeout(() => {
+      treeRef.value?.setCheckedKeys([])
+    }, 300)
   }
 
   /**
@@ -203,10 +238,16 @@
         return
       }
 
+      console.log('💾 开始保存权限，角色ID:', props.roleData.roleId)
+
       // 获取所有选中的菜单name（包括半选状态的父节点）
       const checkedKeys = treeRef.value.getCheckedKeys()
       const halfCheckedKeys = treeRef.value.getHalfCheckedKeys()
       const allKeys = [...checkedKeys, ...halfCheckedKeys]
+
+      console.log('📋 全选中的keys:', checkedKeys)
+      console.log('📋 半选中的keys:', halfCheckedKeys)
+      console.log('📋 合并后的所有keys:', allKeys)
 
       // 过滤出实际的菜单name（排除权限按钮的虚拟节点）
       // 权限按钮的 name 格式为: menuName_authMark
@@ -221,6 +262,8 @@
         // 如果最后一部分是权限标识，则是权限按钮节点，需要过滤掉
         return !authMarks.includes(lastPart.toLowerCase())
       })
+
+      console.log('✅ 过滤后的有效菜单name:', validMenuNames)
 
       // 将菜单name转换为菜单id
       const menuIds: number[] = []
@@ -237,20 +280,40 @@
         return null
       }
 
+      // 调试：输出 dbMenuList 的所有 name
+      const debugMenuList = (nodes: any[]): any[] => {
+        const result: any[] = []
+        nodes.forEach((node) => {
+          result.push({ id: node.id, name: node.name, title: node.meta?.title || node.title })
+          if (node.children?.length) {
+            result.push(...debugMenuList(node.children))
+          }
+        })
+        return result
+      }
+      console.log('📚 dbMenuList 中所有菜单的 name:', debugMenuList(dbMenuList.value))
+
       for (const name of validMenuNames) {
-        const id = findMenuId(menuList.value as any[], String(name))
+        const id = findMenuId(dbMenuList.value, String(name))
         if (id !== null && typeof id === 'number') {
           menuIds.push(id)
+          console.log('✅ 找到菜单:', { name, id })
+        } else {
+          console.warn('⚠️ 未找到菜单name对应的ID:', name)
+          console.warn('   检查 dbMenuList 中是否存在该 name')
         }
       }
+
+      console.log('🏷️ 转换后的菜单ID列表:', menuIds)
 
       // 调用保存接口
       await fetchUpdateRoleMenus(props.roleData.roleId, menuIds)
 
+      console.log('✅ 权限保存成功')
       emit('success')
       handleClose()
     } catch (error) {
-      console.error('保存权限失败:', error)
+      console.error('❌ 保存权限失败:', error)
       ElMessage.error('保存权限失败，请重试')
     }
   }

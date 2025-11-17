@@ -80,6 +80,8 @@ export async function getMenuList(req: AuthRequest, res: Response, next: NextFun
           path: converted.path,
           component: converted.component,
           menuType: converted.menuType,
+          title: converted.title, // 添加 title 字段到顶层，供 buildMenuTree 使用
+          sort: converted.sort, // 添加 sort 字段到顶层，供 buildMenuTree 使用
           meta: {
             title: converted.title,
             icon: converted.icon,

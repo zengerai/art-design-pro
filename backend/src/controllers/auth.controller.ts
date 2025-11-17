@@ -89,9 +89,10 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
 export async function getUserInfo(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const userId = req.user?.userId
+    const roleCode = req.user?.roleCode
 
     const [users] = await pool.execute<RowDataPacket[]>(
-      `SELECT u.id, u.username, u.email, u.avatar, r.role_code
+      `SELECT u.id, u.username, u.email, u.avatar, r.role_code, r.id as role_id
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        WHERE u.id = ?`,
@@ -104,6 +105,19 @@ export async function getUserInfo(req: AuthRequest, res: Response, next: NextFun
 
     const user = users[0]
 
+    // 获取用户有权限的菜单名称列表（仅包含启用的菜单）
+    const [menuNames] = await pool.execute<RowDataPacket[]>(
+      `SELECT DISTINCT m.name 
+       FROM menus m
+       INNER JOIN menu_roles mr ON m.id = mr.menu_id
+       INNER JOIN roles r ON mr.role_id = r.id
+       WHERE r.role_code = ? AND m.enabled = 1`,
+      [roleCode]
+    )
+
+    const allowedMenus = menuNames.map((row) => row.name)
+    console.log(`🔑 角色 ${roleCode} 有权限的菜单:`, allowedMenus)
+
     res.json({
       code: 200,
       data: {
@@ -112,7 +126,8 @@ export async function getUserInfo(req: AuthRequest, res: Response, next: NextFun
         email: user.email,
         avatar: user.avatar,
         roles: [user.role_code],
-        buttons: []
+        buttons: [],
+        menuPermissions: allowedMenus // 新增：用户有权限的菜单名称列表
       }
     })
   } catch (error) {

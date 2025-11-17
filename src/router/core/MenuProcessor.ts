@@ -41,11 +41,18 @@ export class MenuProcessor {
   private async processFrontendMenu(): Promise<AppRouteRecord[]> {
     const userStore = useUserStore()
     const roles = userStore.info?.roles
+    const menuPermissions = userStore.info?.menuPermissions // 用户有权限的菜单名称列表
 
     let menuList = [...asyncRoutes]
 
-    // 根据角色过滤菜单
-    if (roles && roles.length > 0) {
+    // 优先使用 menuPermissions 进行菜单过滤（基于数据库权限配置）
+    if (menuPermissions && menuPermissions.length > 0) {
+      console.log('🔑 使用数据库菜单权限过滤:', menuPermissions)
+      menuList = this.filterMenuByPermissions(menuList, menuPermissions)
+    }
+    // 否则使用角色过滤（兼容旧逻辑）
+    else if (roles && roles.length > 0) {
+      console.log('⚠️ 使用角色过滤（旧逻辑）:', roles)
       menuList = this.filterMenuByRoles(menuList, roles)
     }
 
@@ -76,6 +83,67 @@ export class MenuProcessor {
         }
         acc.push(filteredItem)
       }
+
+      return acc
+    }, [])
+  }
+
+  /**
+   * 根据菜单权限列表过滤菜单（基于数据库配置）
+   *
+   * 核心改进：智能父菜单保留机制
+   * - 当前菜单有权限：保留菜单（递归过滤子菜单）
+   * - 当前菜单无权限但有子菜单：递归过滤子菜单
+   *   - 若过滤后子菜单有结果：保留父菜单作为容器
+   *   - 若过滤后子菜单为空：过滤掉父菜单
+   * - 当前菜单无权限且无子菜单：过滤掉
+   *
+   * @param menu 菜单数组
+   * @param menuPermissions 用户有权限的菜单名称列表
+   */
+  private filterMenuByPermissions(
+    menu: AppRouteRecord[],
+    menuPermissions: string[]
+  ): AppRouteRecord[] {
+    // 性能优化：将数组转为 Set，查找时间复杂度从 O(m) 降为 O(1)
+    const permissionSet = new Set(menuPermissions)
+
+    return menu.reduce((acc: AppRouteRecord[], item) => {
+      // 检查当前菜单项是否在权限列表中
+      const hasPermission = permissionSet.has(item.name as string)
+
+      if (hasPermission) {
+        // 情况1：当前菜单有权限，保留菜单
+        const filteredItem = { ...item }
+        // 递归处理子菜单
+        if (filteredItem.children?.length) {
+          filteredItem.children = this.filterMenuByPermissions(
+            filteredItem.children,
+            menuPermissions
+          )
+        }
+        acc.push(filteredItem)
+      } else if (item.children && item.children.length > 0) {
+        // 情况2：当前菜单无权限但有子菜单，先递归过滤子菜单
+        const filteredChildren = this.filterMenuByPermissions(item.children, menuPermissions)
+
+        // 如果过滤后子菜单非空，保留父菜单作为容器
+        if (filteredChildren.length > 0) {
+          const filteredItem = { ...item }
+          filteredItem.children = filteredChildren
+          acc.push(filteredItem)
+
+          // 开发环境输出日志，便于调试
+          if (import.meta.env.DEV) {
+            const menuName =
+              typeof item.name === 'symbol' ? item.name.toString() : String(item.name)
+            console.log(
+              `[菜单过滤] 保留父菜单容器: ${menuName}, 子菜单数: ${filteredChildren.length}`
+            )
+          }
+        }
+      }
+      // 情况3：当前菜单无权限且无子菜单，跳过（不添加到结果集）
 
       return acc
     }, [])

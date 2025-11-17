@@ -83,6 +83,7 @@ declare namespace Api {
       userName: string
       email: string
       avatar?: string
+      menuPermissions?: string[] // 用户有权限的菜单名称列表
     }
   }
 

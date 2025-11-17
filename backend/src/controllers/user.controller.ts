@@ -100,6 +100,7 @@ export async function getProfile(req: AuthRequest, res: Response, next: NextFunc
     }
 
     const user = users[0]
+    const roleCode = user.roleCode
 
     // 查询用户标签
     const [tags] = await pool.execute<RowDataPacket[]>(
@@ -107,11 +108,26 @@ export async function getProfile(req: AuthRequest, res: Response, next: NextFunc
       [userId]
     )
 
+    // 获取用户有权限的菜单名称列表（仅包含启用的菜单）
+    const [menuNames] = await pool.execute<RowDataPacket[]>(
+      `SELECT DISTINCT m.name 
+       FROM menus m
+       INNER JOIN menu_roles mr ON m.id = mr.menu_id
+       INNER JOIN roles r ON mr.role_id = r.id
+       WHERE r.role_code = ? AND m.enabled = 1`,
+      [roleCode]
+    )
+
+    const menuPermissions = menuNames.map((row) => row.name)
+
     res.json({
       code: 200,
       data: {
         ...user,
-        tags: tags.map((t) => t.tag_name)
+        tags: tags.map((t) => t.tag_name),
+        roles: [roleCode],
+        buttons: [],
+        menuPermissions // 添加菜单权限列表，与登录接口保持一致
       }
     })
   } catch (error) {
