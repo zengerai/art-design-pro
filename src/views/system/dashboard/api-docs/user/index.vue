@@ -607,6 +607,44 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
         '删除users表中的用户记录',
         '返回删除结果'
       ]
+    },
+    {
+      id: 'user-reset-password',
+      name: '重置用户密码',
+      description: '将指定用户的密码重置为默认密码 123456，仅超级管理员可操作',
+      path: '/api/user/{id}/reset-password',
+      method: 'PUT',
+      headers: [
+        {
+          name: 'Authorization',
+          type: 'string',
+          required: true,
+          description: 'Bearer {token}（需要R_SUPER权限）'
+        }
+      ],
+      params: [
+        { name: 'id', type: 'number', required: true, description: '用户ID（URL路径参数）' }
+      ],
+      requestExample: `PUT /api/user/10/reset-password
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`,
+      responseExample: `{
+  "code": 200,
+  "message": "密码已重置为123456"
+}`,
+      errorCodes: [
+        { code: 403, message: '权限不足', description: '当前用户不是超级管理员（R_SUPER）' },
+        { code: 404, message: '用户不存在', description: '指定ID的用户不存在' },
+        { code: 401, message: 'Token无效', description: 'Token已过期或无效' }
+      ],
+      businessLogic: [
+        '解析Token获取当前操作用户的userId和roleCode',
+        '验证是否拥有R_SUPER权限',
+        '查询users表验证目标用户是否存在',
+        '使用bcrypt将密码123456进行哈希加密',
+        '更新users表的password字段',
+        '更新update_by和updated_at字段',
+        '返回重置成功消息'
+      ]
     }
   ])
 

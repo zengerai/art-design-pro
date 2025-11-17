@@ -17,5 +17,6 @@ router.get('/list', authenticate, authorize('R_SUPER'), userController.getUserLi
 router.post('/', authenticate, authorize('R_SUPER'), userController.createUser)
 router.put('/:id', authenticate, authorize('R_SUPER'), userController.updateUser)
 router.delete('/:id', authenticate, authorize('R_SUPER'), userController.deleteUser)
+router.put('/:id/reset-password', authenticate, authorize('R_SUPER'), userController.resetPassword)
 
 export default router

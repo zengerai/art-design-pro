@@ -45,7 +45,7 @@
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import { ACCOUNT_TABLE_DATA } from '@/mock/temp/formData'
   import { useTable } from '@/hooks/core/useTable'
-  import { fetchGetUserList, fetchDeleteUser } from '@/api/system-manage'
+  import { fetchGetUserList, fetchDeleteUser, fetchResetPassword } from '@/api/system-manage'
   import UserSearch from './modules/user-search.vue'
   import UserDialog from './modules/user-dialog.vue'
   import { ElTag, ElMessageBox, ElImage } from 'element-plus'
@@ -186,7 +186,7 @@
         {
           prop: 'operation',
           label: '操作',
-          width: 120,
+          width: 180,
           fixed: 'right', // 固定列
           formatter: (row) =>
             h('div', [
@@ -197,6 +197,11 @@
               h(ArtButtonTable, {
                 type: 'delete',
                 onClick: () => deleteUser(row)
+              }),
+              h(ArtButtonTable, {
+                icon: 'ri:lock-password-line',
+                iconClass: 'bg-warning/12 text-warning',
+                onClick: () => resetPassword(row)
               })
             ])
         }
@@ -267,6 +272,29 @@
       })
       .catch(() => {
         // 用户取消删除
+      })
+  }
+
+  /**
+   * 重置用户密码
+   */
+  const resetPassword = (row: UserListItem): void => {
+    console.log('重置密码:', row)
+    ElMessageBox.confirm(`确定要将用户「${row.userName}」的密码重置为 123456 吗？`, '重置密码', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+      .then(async () => {
+        try {
+          await fetchResetPassword(row.id)
+          // 重置成功后不需要刷新列表
+        } catch (error) {
+          console.error('重置密码失败:', error)
+        }
+      })
+      .catch(() => {
+        // 用户取消
       })
   }
 

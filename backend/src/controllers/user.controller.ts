@@ -332,3 +332,31 @@ export async function deleteUser(req: AuthRequest, res: Response, next: NextFunc
     next(error)
   }
 }
+
+/**
+ * 重置用户密码
+ */
+export async function resetPassword(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params
+    const currentUserId = req.user?.userId
+
+    // 验证用户是否存在
+    const [users] = await pool.execute<RowDataPacket[]>('SELECT id FROM users WHERE id = ?', [id])
+    if (users.length === 0) {
+      throw createError('用户不存在', 404)
+    }
+
+    // 重置密码为123456
+    const hashedPassword = await hashPassword('123456')
+    await pool.execute('UPDATE users SET password=?, update_by=?, updated_at=NOW() WHERE id=?', [
+      hashedPassword,
+      currentUserId,
+      id
+    ])
+
+    res.json({ code: 200, message: '密码已重置为123456' })
+  } catch (error) {
+    next(error)
+  }
+}
