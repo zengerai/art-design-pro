@@ -266,7 +266,7 @@ export async function uploadAvatar(req: AuthRequest, res: Response, next: NextFu
 
 export async function createUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { username, phone, gender, role } = req.body
+    const { username, phone, gender, role, status } = req.body
     const hashedPassword = await hashPassword('123456')
     const currentUserId = req.user?.userId // 获取当前操作用户ID
 
@@ -285,9 +285,12 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
       }
     }
 
+    // 处理状态参数，默认为启用状态
+    const userStatus = status !== undefined ? status : 1
+
     const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO users (username, password, phone, gender, role_id, status, create_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, NOW(), NOW())`,
-      [username, hashedPassword, phone, gender, roleId, currentUserId]
+      `INSERT INTO users (username, password, phone, gender, role_id, status, create_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [username, hashedPassword, phone, gender, roleId, userStatus, currentUserId]
     )
 
     res.json({ code: 200, message: '创建成功', data: { userId: result.insertId } })
@@ -299,7 +302,7 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
 export async function updateUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
-    const { username, phone, gender, role } = req.body
+    const { username, phone, gender, role, status } = req.body
     const currentUserId = req.user?.userId // 获取当前操作用户ID
 
     // 处理角色参数
@@ -317,6 +320,12 @@ export async function updateUser(req: AuthRequest, res: Response, next: NextFunc
         updateFields += ', role_id=?'
         updateParams.push(roles[0].id)
       }
+    }
+
+    // 处理状态参数
+    if (status !== undefined) {
+      updateFields += ', status=?'
+      updateParams.push(status)
     }
 
     updateParams.push(id)

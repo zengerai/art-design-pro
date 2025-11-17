@@ -28,6 +28,12 @@
           />
         </ElSelect>
       </ElFormItem>
+      <ElFormItem label="状态" prop="status">
+        <ElSelect v-model="formData.status" placeholder="请选择状态">
+          <ElOption label="启用" :value="1" />
+          <ElOption label="禁用" :value="0" />
+        </ElSelect>
+      </ElFormItem>
     </ElForm>
     <template #footer>
       <div class="dialog-footer">
@@ -92,7 +98,8 @@
     username: '',
     phone: '',
     gender: 1 as 1 | 2, // 1-男，2-女
-    role: [] as string[]
+    role: [] as string[],
+    status: 1 // 1-启用，0-禁用
   })
 
   // 表单验证规则
@@ -106,7 +113,8 @@
       { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
     ],
     gender: [{ required: true, message: '请选择性别', trigger: 'blur' }],
-    role: [{ required: true, message: '请选择角色', trigger: 'blur' }]
+    role: [{ required: true, message: '请选择角色', trigger: 'blur' }],
+    status: [{ required: true, message: '请选择状态', trigger: 'change' }]
   }
 
   /**
@@ -121,7 +129,8 @@
       username: isEdit && row ? row.userName || '' : '',
       phone: isEdit && row ? row.userPhone || '' : '',
       gender: isEdit && row && row.userGender ? (row.userGender as number) : 1,
-      role: isEdit && row ? (Array.isArray(row.userRoles) ? row.userRoles : []) : []
+      role: isEdit && row ? (Array.isArray(row.userRoles) ? row.userRoles : []) : [],
+      status: isEdit && row ? Number(row.status) || 1 : 1
     })
   }
 
@@ -158,7 +167,8 @@
               username: formData.username,
               phone: formData.phone,
               gender: formData.gender,
-              role: formData.role
+              role: formData.role,
+              status: formData.status
             })
           } else {
             // 更新用户
@@ -171,7 +181,8 @@
               username: formData.username,
               phone: formData.phone,
               gender: formData.gender,
-              role: formData.role
+              role: formData.role,
+              status: formData.status
             })
           }
           dialogVisible.value = false

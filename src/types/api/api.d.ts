@@ -119,6 +119,7 @@ declare namespace Api {
       phone: string
       gender: number // 性别：1-男，2-女
       role: string[]
+      status?: number // 状态：1-启用，0-禁用
     }
 
     /** 更新用户参数 */
@@ -127,6 +128,7 @@ declare namespace Api {
       phone: string
       gender: number // 性别：1-男，2-女
       role?: string[]
+      status?: number // 状态：1-启用，0-禁用
     }
 
     /** 用户个人信息 */
