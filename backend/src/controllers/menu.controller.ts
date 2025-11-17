@@ -212,9 +212,9 @@ export async function getMenuDetail(req: AuthRequest, res: Response, next: NextF
 export async function createMenu(req: AuthRequest, res: Response, next: NextFunction) {
   const connection = await pool.getConnection()
   try {
-    // 权限验证：仅管理员可操作
-    if (req.user?.role !== 'admin') {
-      throw createError('无权限执行此操作', 403)
+    // 权限验证：仅超级管理员可操作
+    if (req.user?.roleCode !== 'R_SUPER') {
+      throw createError('无权限执行此操作，仅超级管理员可创建菜单', 403)
     }
 
     const { roles, ...menuData } = req.body
@@ -277,9 +277,9 @@ export async function createMenu(req: AuthRequest, res: Response, next: NextFunc
 export async function updateMenu(req: AuthRequest, res: Response, next: NextFunction) {
   const connection = await pool.getConnection()
   try {
-    // 权限验证
-    if (req.user?.role !== 'admin') {
-      throw createError('无权限执行此操作', 403)
+    // 权限验证：仅超级管理员可操作
+    if (req.user?.roleCode !== 'R_SUPER') {
+      throw createError('无权限执行此操作，仅超级管理员可更新菜单', 403)
     }
 
     const menuId = parseInt(req.params.id, 10)
@@ -349,9 +349,9 @@ export async function updateMenu(req: AuthRequest, res: Response, next: NextFunc
 export async function deleteMenu(req: AuthRequest, res: Response, next: NextFunction) {
   const connection = await pool.getConnection()
   try {
-    // 权限验证
-    if (req.user?.role !== 'admin') {
-      throw createError('无权限执行此操作', 403)
+    // 权限验证：仅超级管理员可操作
+    if (req.user?.roleCode !== 'R_SUPER') {
+      throw createError('无权限执行此操作，仅超级管理员可删除菜单', 403)
     }
 
     const menuId = parseInt(req.params.id, 10)

@@ -45,8 +45,33 @@
   import type { FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtForm from '@/components/core/forms/art-form/index.vue'
   import { useWindowSize } from '@vueuse/core'
+  import { fetchGetRoleList } from '@/api/system-manage'
 
   const { width } = useWindowSize()
+
+  // 角色列表数据
+  const roleList = ref<Api.SystemManage.RoleListItem[]>([])
+  const roleOptions = computed(() =>
+    roleList.value.map((role) => ({
+      label: role.roleName,
+      value: role.roleId
+    }))
+  )
+
+  // 获取角色列表
+  const getRoleList = async () => {
+    try {
+      const res = await fetchGetRoleList({ current: 1, size: 1000 })
+      roleList.value = res.records || []
+    } catch (error) {
+      console.error('获取角色列表失败:', error)
+    }
+  }
+
+  // 组件挂载时获取角色列表
+  onMounted(() => {
+    getRoleList()
+  })
 
   /**
    * 创建带 tooltip 的表单标签
@@ -88,7 +113,7 @@
     showTextBadge: string
     fixedTab: boolean
     activePath: string
-    roles: string[]
+    roleIds: number[] // 改为角色ID数组
     isFullPage: boolean
     authName: string
     authLabel: string
@@ -139,7 +164,7 @@
     showTextBadge: '',
     fixedTab: false,
     activePath: '',
-    roles: [],
+    roleIds: [],
     isFullPage: false,
     authName: '',
     authLabel: '',
@@ -194,11 +219,17 @@
         {
           label: createLabelTooltip(
             '角色权限',
-            '仅用于前端权限模式：配置角色标识（如 R_SUPER、R_ADMIN）\n后端权限模式：无需配置'
+            '选择可以访问此菜单的角色\n未选择时，所有角色都可访问'
           ),
-          key: 'roles',
-          type: 'inputtag',
-          props: { placeholder: '输入角色标识后按回车，如：R_SUPER' }
+          key: 'roleIds',
+          type: 'select',
+          props: {
+            placeholder: '请选择角色',
+            multiple: true,
+            clearable: true,
+            filterable: true,
+            options: roleOptions.value
+          }
         },
         {
           label: '菜单排序',
@@ -284,6 +315,16 @@
   }
 
   /**
+   * roleCode 转 roleId
+   */
+  const convertRoleCodesToIds = (roleCodes: string[] = []): number[] => {
+    if (!roleCodes || roleCodes.length === 0) return []
+    return roleCodes
+      .map((code) => roleList.value.find((role) => role.roleCode === code)?.roleId)
+      .filter((id): id is number => id !== undefined)
+  }
+
+  /**
    * 加载表单数据（编辑模式）
    */
   const loadFormData = (): void => {
@@ -311,7 +352,8 @@
       form.showTextBadge = row.meta?.showTextBadge || ''
       form.fixedTab = row.meta?.fixedTab ?? false
       form.activePath = row.meta?.activePath || ''
-      form.roles = row.meta?.roles || []
+      // 将 roleCode 数组转换为 roleId 数组
+      form.roleIds = convertRoleCodesToIds(row.meta?.roles || [])
       form.isFullPage = row.meta?.isFullPage ?? false
     } else {
       const row = props.editData
@@ -330,7 +372,31 @@
 
     try {
       await formRef.value.validate()
-      emit('submit', { ...form })
+
+      // 转换前端表单字段到后端API字段
+      const submitData: any = {
+        menuType: form.menuType,
+        title: form.name, // 前端的name字段对应后端的title
+        name: form.label, // 前端的label字段对应后端的name
+        path: form.path,
+        component: form.component,
+        icon: form.icon,
+        sort: form.sort,
+        enabled: form.isEnable,
+        isHide: form.isHide,
+        isHideTab: form.isHideTab,
+        keepAlive: form.keepAlive,
+        link: form.link,
+        isIframe: form.isIframe,
+        showBadge: form.showBadge,
+        showTextBadge: form.showTextBadge,
+        fixedTab: form.fixedTab,
+        activePath: form.activePath,
+        roles: form.roleIds.length > 0 ? form.roleIds : undefined, // 提交角色ID数组，空数组则不传
+        isFullPage: form.isFullPage
+      }
+
+      emit('submit', submitData)
       ElMessage.success(`${isEdit.value ? '编辑' : '新增'}成功`)
       handleCancel()
     } catch {
