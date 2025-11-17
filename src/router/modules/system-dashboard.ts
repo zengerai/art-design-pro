@@ -68,6 +68,17 @@ export const systemDashboardRoutes: AppRouteRecord = {
             roles: ['R_SUPER'],
             keepAlive: true
           }
+        },
+        {
+          path: 'menu',
+          name: 'SystemApiDocMenu',
+          component: '/system/dashboard/api-docs/menu',
+          meta: {
+            title: 'menus.systemDashboard.apiDocs.menu',
+            icon: 'ri:menu-line',
+            roles: ['R_SUPER'],
+            keepAlive: true
+          }
         }
       ]
     }

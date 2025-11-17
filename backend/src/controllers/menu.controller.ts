@@ -5,7 +5,6 @@ import { createError } from '../middleware/error.middleware.js'
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
 import {
   camelToSnake,
-  snakeToCamel,
   convertBooleanToInt,
   convertIntToBoolean,
   buildMenuTree,
@@ -38,7 +37,7 @@ export async function getMenuList(req: AuthRequest, res: Response, next: NextFun
         m.show_badge as showBadge, m.show_text_badge as showTextBadge,
         m.fixed_tab as fixedTab, m.active_path as activePath,
         m.is_full_page as isFullPage, m.auth_mark as authMark,
-        m.created_at as createTime, m.updated_at as updateTime,
+        m.created_at as createdAt, m.updated_at as updatedAt,
         GROUP_CONCAT(r.role_code) as roles
       FROM menus m
       LEFT JOIN menu_roles mr ON m.id = mr.menu_id
@@ -173,7 +172,14 @@ export async function getMenuDetail(req: AuthRequest, res: Response, next: NextF
 
     const [records] = await pool.execute<RowDataPacket[]>(
       `SELECT 
-        m.*,
+        m.id, m.parent_id as parentId, m.menu_type as menuType,
+        m.name, m.path, m.component, m.title, m.icon, m.sort,
+        m.enabled, m.is_hide as isHide, m.is_hide_tab as isHideTab,
+        m.keep_alive as keepAlive, m.link, m.is_iframe as isIframe,
+        m.show_badge as showBadge, m.show_text_badge as showTextBadge,
+        m.fixed_tab as fixedTab, m.active_path as activePath,
+        m.is_full_page as isFullPage, m.auth_mark as authMark,
+        m.created_at as createdAt, m.updated_at as updatedAt,
         GROUP_CONCAT(r.role_code) as roles
       FROM menus m
       LEFT JOIN menu_roles mr ON m.id = mr.menu_id
@@ -188,7 +194,7 @@ export async function getMenuDetail(req: AuthRequest, res: Response, next: NextF
     }
 
     const menu = records[0]
-    const converted = convertIntToBoolean(snakeToCamel(menu))
+    const converted = convertIntToBoolean(menu)
 
     res.json({
       code: 200,

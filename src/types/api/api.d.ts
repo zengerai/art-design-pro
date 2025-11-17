@@ -235,6 +235,7 @@ declare namespace Api {
       activePath?: string
       isFullPage: boolean
       authMark?: string
+      roles?: string[] // 关联的角色编码列表
       createdAt: string
       updatedAt: string
     }
@@ -262,9 +263,7 @@ declare namespace Api {
     >
 
     /** 菜单详情 */
-    interface MenuDetail extends MenuListItem {
-      roles?: number[] // 关联的角色ID列表
-    }
+    type MenuDetail = MenuListItem
 
     /** 创建菜单参数 */
     interface CreateMenuParams {
