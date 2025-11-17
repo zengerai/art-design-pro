@@ -92,27 +92,60 @@ CREATE TABLE user_tags (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户标签表';
 
 -- ==========================================
--- 5. 验证数据
+-- 5. 创建菜单表 (menus)
 -- ==========================================
--- 查看所有表
-SHOW TABLES;
+DROP TABLE IF EXISTS menus;
 
--- 查看用户和角色关联数据
-SELECT 
-  u.id,
-  u.username,
-  u.real_name,
-  u.email,
-  u.mobile,
-  u.role_id,
-  r.role_name,
-  r.role_code,
-  r.dashboard_path,
-  u.status,
-  u.created_at
-FROM users u
-JOIN roles r ON u.role_id = r.id
-ORDER BY u.id;
+CREATE TABLE menus (
+  id INT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID，主键',
+  parent_id INT DEFAULT NULL COMMENT '父菜单ID，NULL表示顶级菜单',
+  menu_type VARCHAR(20) NOT NULL DEFAULT 'menu' COMMENT '菜单类型：menu-菜单，button-按钮',
+  name VARCHAR(100) NOT NULL COMMENT '路由名称（唯一标识），如 User',
+  path VARCHAR(255) DEFAULT NULL COMMENT '路由路径，按钮类型为NULL',
+  component VARCHAR(255) DEFAULT NULL COMMENT '组件路径',
+  title VARCHAR(100) NOT NULL COMMENT '菜单标题（支持国际化键名）',
+  icon VARCHAR(100) DEFAULT NULL COMMENT '图标名称',
+  sort INT NOT NULL DEFAULT 1 COMMENT '排序号，数字越小越靠前',
+  enabled TINYINT NOT NULL DEFAULT 1 COMMENT '启用状态：1-启用，0-禁用',
+  is_hide TINYINT NOT NULL DEFAULT 0 COMMENT '是否隐藏菜单：1-是，0-否',
+  is_hide_tab TINYINT NOT NULL DEFAULT 0 COMMENT '是否隐藏标签页：1-是，0-否',
+  keep_alive TINYINT NOT NULL DEFAULT 0 COMMENT '是否缓存页面：1-是，0-否',
+  link VARCHAR(500) DEFAULT NULL COMMENT '外部链接URL',
+  is_iframe TINYINT NOT NULL DEFAULT 0 COMMENT '是否内嵌页面：1-是，0-否',
+  show_badge TINYINT NOT NULL DEFAULT 0 COMMENT '是否显示徽章：1-是，0-否',
+  show_text_badge VARCHAR(50) DEFAULT NULL COMMENT '文本徽章内容',
+  fixed_tab TINYINT NOT NULL DEFAULT 0 COMMENT '是否固定标签：1-是，0-否',
+  active_path VARCHAR(255) DEFAULT NULL COMMENT '激活菜单路径',
+  is_full_page TINYINT NOT NULL DEFAULT 0 COMMENT '是否全屏页面：1-是，0-否',
+  auth_mark VARCHAR(100) DEFAULT NULL COMMENT '权限标识（按钮类型使用）',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  create_by INT DEFAULT NULL COMMENT '创建人ID',
+  update_by INT DEFAULT NULL COMMENT '更新人ID',
+  INDEX idx_parent_id (parent_id) COMMENT '加速父子查询',
+  INDEX idx_menu_type (menu_type) COMMENT '加速类型筛选',
+  INDEX idx_sort (sort) COMMENT '加速排序查询',
+  UNIQUE KEY uk_name (name) COMMENT '确保路由名称唯一性',
+  CONSTRAINT fk_menu_parent FOREIGN KEY (parent_id) REFERENCES menus(id) ON DELETE CASCADE,
+  CONSTRAINT fk_menu_creator FOREIGN KEY (create_by) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_menu_updater FOREIGN KEY (update_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='菜单表';
+
+-- ==========================================
+-- 6. 创建菜单角色关联表 (menu_roles)
+-- ==========================================
+DROP TABLE IF EXISTS menu_roles;
+
+CREATE TABLE menu_roles (
+  id INT AUTO_INCREMENT PRIMARY KEY COMMENT '关联ID，主键',
+  menu_id INT NOT NULL COMMENT '菜单ID',
+  role_id INT NOT NULL COMMENT '角色ID',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  UNIQUE KEY uk_menu_role (menu_id, role_id) COMMENT '防止重复关联',
+  INDEX idx_role_id (role_id) COMMENT '加速角色查询',
+  CONSTRAINT fk_menu_role_menu FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE,
+  CONSTRAINT fk_menu_role_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='菜单角色关联表';
 
 -- ==========================================
 -- 初始化完成提示

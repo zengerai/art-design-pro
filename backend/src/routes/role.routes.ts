@@ -10,4 +10,8 @@ router.post('/', authenticate, authorize('R_SUPER'), roleController.createRole)
 router.put('/:id', authenticate, authorize('R_SUPER'), roleController.updateRole)
 router.delete('/:id', authenticate, authorize('R_SUPER'), roleController.deleteRole)
 
+// 角色菜单权限管理
+router.get('/:id/menus', authenticate, authorize('R_SUPER'), roleController.getRoleMenus)
+router.put('/:id/menus', authenticate, authorize('R_SUPER'), roleController.updateRoleMenus)
+
 export default router

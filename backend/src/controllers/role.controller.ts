@@ -99,3 +99,58 @@ export async function deleteRole(req: AuthRequest, res: Response, next: NextFunc
     next(error)
   }
 }
+
+/**
+ * 获取角色的菜单权限
+ */
+export async function getRoleMenus(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params
+
+    const [menuIds] = await pool.execute<RowDataPacket[]>(
+      'SELECT menu_id FROM menu_roles WHERE role_id = ?',
+      [id]
+    )
+
+    res.json({
+      code: 200,
+      data: menuIds.map((row) => row.menu_id)
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * 更新角色的菜单权限
+ */
+export async function updateRoleMenus(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params
+    const { menuIds } = req.body
+
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+
+      // 删除旧的权限关联
+      await connection.execute('DELETE FROM menu_roles WHERE role_id = ?', [id])
+
+      // 插入新的权限关联
+      if (menuIds && menuIds.length > 0) {
+        const values = menuIds.map((menuId: number) => [menuId, id])
+        await connection.query('INSERT INTO menu_roles (menu_id, role_id) VALUES ?', [values])
+      }
+
+      await connection.commit()
+      res.json({ code: 200, message: '权限保存成功' })
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  } catch (error) {
+    next(error)
+  }
+}

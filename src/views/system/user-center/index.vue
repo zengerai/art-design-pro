@@ -7,27 +7,27 @@
           <img class="absolute top-0 left-0 w-full h-50 object-cover" src="@imgs/user/bg.webp" />
           <img
             class="relative z-10 w-20 h-20 mt-30 mx-auto object-cover border-2 border-white rounded-full"
-            src="@imgs/user/avatar.webp"
+            :src="userAvatar"
           />
           <h2 class="mt-5 text-xl font-normal">{{ userInfo.userName }}</h2>
-          <p class="mt-5 text-sm">专注于用户体验跟视觉设计</p>
+          <p class="mt-5 text-sm">{{ form.des || '暂无个人介绍' }}</p>
 
           <div class="w-75 mx-auto mt-7.5 text-left">
             <div class="mt-2.5">
               <ArtSvgIcon icon="ri:mail-line" class="text-g-700" />
-              <span class="ml-2 text-sm">jdkjjfnndf@mall.com</span>
+              <span class="ml-2 text-sm">{{ profileDetail.email || '暂无邮箱' }}</span>
             </div>
             <div class="mt-2.5">
               <ArtSvgIcon icon="ri:user-3-line" class="text-g-700" />
-              <span class="ml-2 text-sm">交互专家</span>
+              <span class="ml-2 text-sm">{{ form.realName || '暂无姓名' }}</span>
             </div>
             <div class="mt-2.5">
               <ArtSvgIcon icon="ri:map-pin-line" class="text-g-700" />
-              <span class="ml-2 text-sm">广东省深圳市</span>
+              <span class="ml-2 text-sm">{{ profileDetail.address || '暂无地址' }}</span>
             </div>
             <div class="mt-2.5">
-              <ArtSvgIcon icon="ri:dribbble-fill" class="text-g-700" />
-              <span class="ml-2 text-sm">字节跳动－某某平台部－UED</span>
+              <ArtSvgIcon icon="ri:phone-line" class="text-g-700" />
+              <span class="ml-2 text-sm">{{ form.mobile || '暂无手机' }}</span>
             </div>
           </div>
 
@@ -62,7 +62,7 @@
                 <ElInput v-model="form.realName" :disabled="!isEdit" />
               </ElFormItem>
               <ElFormItem label="性别" prop="sex" class="ml-5">
-                <ElSelect v-model="form.sex" placeholder="Select" :disabled="!isEdit">
+                <ElSelect v-model="form.sex" placeholder="请选择" :disabled="!isEdit">
                   <ElOption
                     v-for="item in options"
                     :key="item.value"
@@ -106,7 +106,14 @@
         <div class="art-card-sm my-5">
           <h1 class="p-4 text-xl font-normal border-b border-g-300">更改密码</h1>
 
-          <ElForm :model="pwdForm" class="box-border p-5" label-width="86px" label-position="top">
+          <ElForm
+            :model="pwdForm"
+            class="box-border p-5"
+            ref="pwdFormRef"
+            :rules="pwdRules"
+            label-width="86px"
+            label-position="top"
+          >
             <ElFormItem label="当前密码" prop="password">
               <ElInput
                 v-model="pwdForm.password"
@@ -149,6 +156,9 @@
 <script setup lang="ts">
   import { useUserStore } from '@/store/modules/user'
   import type { FormInstance, FormRules } from 'element-plus'
+  import { ElMessage } from 'element-plus'
+  import { fetchGetProfile, fetchUpdateProfile, fetchChangePassword } from '@/api/system-manage'
+  import avatarImg from '@/assets/images/user/avatar.webp'
 
   defineOptions({ name: 'UserCenter' })
 
@@ -159,27 +169,52 @@
   const isEditPwd = ref(false)
   const date = ref('')
   const ruleFormRef = ref<FormInstance>()
+  const pwdFormRef = ref<FormInstance>()
+  const loading = ref(false)
 
   /**
    * 用户信息表单
    */
   const form = reactive({
-    realName: 'John Snow',
-    nikeName: '皮卡丘',
-    email: '59301283@mall.com',
-    mobile: '18888888888',
-    address: '广东省深圳市宝安区西乡街道101栋201',
-    sex: '2',
-    des: 'Art Design Pro 是一款兼具设计美学与高效开发的后台系统.'
+    realName: '',
+    nikeName: '',
+    email: '',
+    mobile: '',
+    address: '',
+    sex: 1,
+    des: ''
   })
 
   /**
    * 密码修改表单
    */
   const pwdForm = reactive({
-    password: '123456',
-    newPassword: '123456',
-    confirmPassword: '123456'
+    password: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+
+  /**
+   * 用户头像和详细信息
+   */
+  const profileDetail = reactive({
+    avatar: '',
+    email: '',
+    position: '',
+    address: '',
+    department: ''
+  })
+
+  /**
+   * 用户标签列表
+   */
+  const lableList = ref<string[]>([])
+
+  /**
+   * 用户头像URL（带默认图片处理）
+   */
+  const userAvatar = computed(() => {
+    return profileDetail.avatar || avatarImg
   })
 
   /**
@@ -190,32 +225,80 @@
       { required: true, message: '请输入姓名', trigger: 'blur' },
       { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
     ],
-    nikeName: [
-      { required: true, message: '请输入昵称', trigger: 'blur' },
-      { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-    ],
     email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }],
     mobile: [{ required: true, message: '请输入手机号码', trigger: 'blur' }],
-    address: [{ required: true, message: '请输入地址', trigger: 'blur' }],
     sex: [{ required: true, message: '请选择性别', trigger: 'blur' }]
+  })
+
+  /**
+   * 密码表单验证规则
+   */
+  const pwdRules = reactive<FormRules>({
+    password: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
+    newPassword: [
+      { required: true, message: '请输入新密码', trigger: 'blur' },
+      { min: 6, message: '密码长度不能少于 6 位', trigger: 'blur' }
+    ],
+    confirmPassword: [
+      { required: true, message: '请确认新密码', trigger: 'blur' },
+      {
+        validator: (rule: any, value: any, callback: any) => {
+          if (value !== pwdForm.newPassword) {
+            callback(new Error('两次输入密码不一致'))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
+    ]
   })
 
   /**
    * 性别选项
    */
   const options = [
-    { value: '1', label: '男' },
-    { value: '2', label: '女' }
+    { value: 1, label: '男' },
+    { value: 2, label: '女' }
   ]
-
-  /**
-   * 用户标签列表
-   */
-  const lableList: Array<string> = ['专注设计', '很有想法', '辣~', '大长腿', '川妹子', '海纳百川']
 
   onMounted(() => {
     getDate()
+    loadUserProfile()
   })
+
+  /**
+   * 加载用户个人信息
+   */
+  const loadUserProfile = async () => {
+    try {
+      loading.value = true
+      const data = await fetchGetProfile()
+      if (data) {
+        // 更新表单数据
+        form.realName = data.realName || ''
+        form.nikeName = data.nickname || ''
+        form.email = data.email || ''
+        form.mobile = data.phone || ''
+        form.address = data.address || ''
+        form.sex = data.gender || 1
+        form.des = data.description || ''
+
+        // 更新详细信息展示
+        profileDetail.avatar = data.avatar || ''
+        profileDetail.email = data.email || ''
+        profileDetail.address = data.address || ''
+
+        // 更新标签列表
+        lableList.value = data.tags || []
+      }
+    } catch (error) {
+      console.error('加载用户信息失败:', error)
+      ElMessage.error('加载用户信息失败')
+    } finally {
+      loading.value = false
+    }
+  }
 
   /**
    * 根据当前时间获取问候语
@@ -234,14 +317,90 @@
   /**
    * 切换用户信息编辑状态
    */
-  const edit = () => {
-    isEdit.value = !isEdit.value
+  const edit = async () => {
+    if (isEdit.value) {
+      // 保存操作
+      if (!ruleFormRef.value) return
+
+      await ruleFormRef.value.validate(async (valid) => {
+        if (valid) {
+          try {
+            loading.value = true
+            await fetchUpdateProfile({
+              realName: form.realName,
+              nickname: form.nikeName,
+              sex: form.sex,
+              email: form.email,
+              mobile: form.mobile,
+              address: form.address,
+              description: form.des
+            })
+            isEdit.value = false
+            // 重新加载数据
+            await loadUserProfile()
+          } catch (error) {
+            console.error('保存失败:', error)
+          } finally {
+            loading.value = false
+          }
+        }
+      })
+    } else {
+      // 进入编辑模式
+      isEdit.value = true
+    }
   }
 
   /**
    * 切换密码编辑状态
    */
-  const editPwd = () => {
-    isEditPwd.value = !isEditPwd.value
+  const editPwd = async () => {
+    if (isEditPwd.value) {
+      // 保存密码
+      if (!pwdFormRef.value) return
+
+      await pwdFormRef.value.validate(async (valid) => {
+        if (valid) {
+          try {
+            loading.value = true
+            await fetchChangePassword({
+              oldPassword: pwdForm.password,
+              newPassword: pwdForm.newPassword
+            })
+            isEditPwd.value = false
+
+            // 清空密码表单
+            pwdForm.password = ''
+            pwdForm.newPassword = ''
+            pwdForm.confirmPassword = ''
+            if (pwdFormRef.value) {
+              pwdFormRef.value.resetFields()
+            }
+
+            // 修改成功提示（与用户管理页面保持一致）
+            ElMessage({
+              showClose: true,
+              message: '密码修改成功，请妥善保管您的新密码',
+              type: 'success',
+              duration: 3000
+            })
+          } catch (error) {
+            console.error('修改密码失败:', error)
+            // 修改失败提示
+            ElMessage({
+              showClose: true,
+              message: '密码修改失败，请检查当前密码是否正确',
+              type: 'error',
+              duration: 3000
+            })
+          } finally {
+            loading.value = false
+          }
+        }
+      })
+    } else {
+      // 进入编辑模式
+      isEditPwd.value = true
+    }
   }
 </script>

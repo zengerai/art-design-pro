@@ -77,4 +77,6 @@ export interface AppRouteRecord extends Omit<RouteRecordRaw, 'meta' | 'children'
   meta: RouteMeta
   children?: AppRouteRecord[]
   component?: string | (() => Promise<any>)
+  /** 后端ID（用于编辑/删除操作） */
+  _backendId?: number
 }

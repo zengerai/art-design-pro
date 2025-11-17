@@ -56,6 +56,12 @@
   import type { AppRouteRecord } from '@/types/router'
   import MenuDialog from './modules/menu-dialog.vue'
   import { ElTag, ElMessageBox, ElMessage } from 'element-plus'
+  import {
+    fetchGetMenuTree,
+    fetchCreateMenu,
+    fetchUpdateMenu,
+    fetchDeleteMenu
+  } from '@/api/system-manage'
 
   defineOptions({ name: 'Menus' })
 
@@ -100,20 +106,55 @@
 
   /**
    * 获取菜单列表数据
-   * 注意：当前后端菜单接口尚未实现，使用模拟数据
    */
   const getMenuList = async (): Promise<void> => {
     loading.value = true
 
     try {
-      // TODO: 后端菜单接口尚未实现，暂时返回空数组
-      ElMessage.warning('后端菜单接口尚未实现，请在设置中切换为前端模式')
-      tableData.value = []
+      const data = await fetchGetMenuTree({ enabledOnly: false })
+      // 将后端数据转换为前端路由格式
+      tableData.value = convertBackendToFrontend(data)
     } catch (error) {
-      throw error instanceof Error ? error : new Error('获取菜单失败')
+      console.error('获取菜单失败:', error)
+      ElMessage.error('获取菜单列表失败')
+      tableData.value = []
     } finally {
       loading.value = false
     }
+  }
+
+  /**
+   * 将后端菜单数据转换为前端路由格式
+   */
+  const convertBackendToFrontend = (items: Api.SystemManage.MenuTreeItem[]): AppRouteRecord[] => {
+    return items.map((item) => {
+      const route: AppRouteRecord = {
+        path: item.path || '',
+        name: item.name,
+        component: item.component,
+        meta: {
+          title: item.meta?.title || item.title || '',
+          icon: item.meta?.icon || item.icon,
+          sort: item.meta?.sort || item.sort,
+          isHide: item.meta?.isHide ?? item.isHide,
+          isHideTab: item.meta?.isHideTab ?? item.isHideTab,
+          keepAlive: item.meta?.keepAlive ?? item.keepAlive,
+          link: item.meta?.link || item.link,
+          isIframe: item.meta?.isIframe ?? item.isIframe,
+          showBadge: item.meta?.showBadge ?? item.showBadge,
+          showTextBadge: item.meta?.showTextBadge || item.showTextBadge,
+          fixedTab: item.meta?.fixedTab ?? item.fixedTab,
+          activePath: item.meta?.activePath || item.activePath,
+          isFullPage: item.meta?.isFullPage ?? item.isFullPage,
+          authMark: item.meta?.authMark || item.authMark,
+          authList: item.meta?.authList,
+          roles: item.meta?.roles
+        },
+        _backendId: item.id, // 保存后端ID用于编辑/删除
+        children: item.children ? convertBackendToFrontend(item.children) : undefined
+      }
+      return route
+    })
   }
 
   /**
@@ -223,7 +264,7 @@
           }),
           h(ArtButtonTable, {
             type: 'delete',
-            onClick: () => handleDeleteMenu()
+            onClick: () => handleDeleteMenu(row)
           })
         ])
       }
@@ -414,27 +455,43 @@
    * 提交表单数据
    * @param formData 表单数据
    */
-  const handleSubmit = (formData: MenuFormData): void => {
-    console.log('提交数据:', formData)
-    // TODO: 调用API保存数据
-    getMenuList()
+  const handleSubmit = async (formData: MenuFormData): Promise<void> => {
+    try {
+      if (editData.value?._backendId) {
+        // 编辑模式
+        await fetchUpdateMenu(editData.value._backendId, formData)
+      } else {
+        // 创建模式
+        await fetchCreateMenu(formData as Api.SystemManage.CreateMenuParams)
+      }
+      dialogVisible.value = false
+      getMenuList()
+    } catch (error) {
+      console.error('保存菜单失败:', error)
+    }
   }
 
   /**
    * 删除菜单
    */
-  const handleDeleteMenu = async (): Promise<void> => {
+  const handleDeleteMenu = async (row: AppRouteRecord): Promise<void> => {
+    if (!row._backendId) {
+      ElMessage.error('无效的菜单ID')
+      return
+    }
+
     try {
-      await ElMessageBox.confirm('确定要删除该菜单吗？删除后无法恢复', '提示', {
+      await ElMessageBox.confirm('确定要删除该菜单吗？删除后将级联删除所有子菜单', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       })
+      await fetchDeleteMenu(row._backendId)
       ElMessage.success('删除成功')
       getMenuList()
     } catch (error) {
       if (error !== 'cancel') {
-        ElMessage.error('删除失败')
+        console.error('删除菜单失败:', error)
       }
     }
   }

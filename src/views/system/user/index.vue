@@ -48,7 +48,7 @@
   import { fetchGetUserList, fetchDeleteUser, fetchResetPassword } from '@/api/system-manage'
   import UserSearch from './modules/user-search.vue'
   import UserDialog from './modules/user-dialog.vue'
-  import { ElTag, ElMessageBox, ElImage } from 'element-plus'
+  import { ElTag, ElMessageBox, ElMessage, ElImage } from 'element-plus'
   import { DialogType } from '@/types'
   import { formatDateTime } from '@/utils/date'
 
@@ -288,9 +288,22 @@
       .then(async () => {
         try {
           await fetchResetPassword(row.id)
-          // 重置成功后不需要刷新列表
+          // 重置成功提示
+          ElMessage({
+            showClose: true,
+            message: `用户「${row.userName}」的密码已重置为 123456`,
+            type: 'success',
+            duration: 3000
+          })
         } catch (error) {
           console.error('重置密码失败:', error)
+          // 重置失败提示
+          ElMessage({
+            showClose: true,
+            message: '密码重置失败，请稍后重试',
+            type: 'error',
+            duration: 3000
+          })
         }
       })
       .catch(() => {

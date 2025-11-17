@@ -128,6 +128,46 @@ declare namespace Api {
       role?: string[]
     }
 
+    /** 用户个人信息 */
+    interface UserProfile {
+      id: number
+      username: string
+      realName: string
+      nickname: string
+      avatar: string
+      gender: number
+      email: string
+      phone: string
+      address: string
+      description: string
+      status: string
+      lastLoginTime: string
+      lastLoginIp: string
+      createdAt: string
+      updatedAt: string
+      roleId: number
+      roleName: string
+      roleCode: string
+      tags: string[]
+    }
+
+    /** 更新个人信息参数 */
+    interface UpdateProfileParams {
+      realName: string
+      nickname?: string
+      sex: number // 性别：1-男，2-女
+      email: string
+      mobile: string
+      address?: string
+      description?: string
+    }
+
+    /** 修改密码参数 */
+    interface ChangePasswordParams {
+      oldPassword: string
+      newPassword: string
+    }
+
     /** 角色列表 */
     type RoleList = Api.Common.PaginatedResponse<RoleListItem>
 
@@ -165,6 +205,93 @@ declare namespace Api {
       enabled: boolean
       dashboardPath?: string
     }
+
+    // ===== 菜单管理类型 =====
+
+    /** 菜单类型 */
+    type MenuType = 'menu' | 'button'
+
+    /** 菜单列表项 */
+    interface MenuListItem {
+      id: number
+      parentId?: number
+      menuType: MenuType
+      name: string
+      path?: string
+      component?: string
+      title: string
+      icon?: string
+      sort: number
+      enabled: boolean
+      isHide: boolean
+      isHideTab: boolean
+      keepAlive: boolean
+      link?: string
+      isIframe: boolean
+      showBadge: boolean
+      showTextBadge?: string
+      fixedTab: boolean
+      activePath?: string
+      isFullPage: boolean
+      authMark?: string
+      createdAt: string
+      updatedAt: string
+    }
+
+    /** 菜单树形节点 */
+    interface MenuTreeItem extends MenuListItem {
+      children?: MenuTreeItem[]
+      meta?: {
+        authList?: Array<{
+          title: string
+          authMark: string
+          sort: number
+        }>
+      }
+    }
+
+    /** 菜单列表（分页） */
+    type MenuList = Api.Common.PaginatedResponse<MenuListItem>
+
+    /** 菜单搜索参数 */
+    type MenuSearchParams = Partial<
+      Pick<MenuListItem, 'id' | 'parentId' | 'menuType' | 'name' | 'title' | 'enabled'> & {
+        keyword?: string
+      } & Api.Common.CommonSearchParams
+    >
+
+    /** 菜单详情 */
+    interface MenuDetail extends MenuListItem {
+      roles?: number[] // 关联的角色ID列表
+    }
+
+    /** 创建菜单参数 */
+    interface CreateMenuParams {
+      parentId?: number
+      menuType: MenuType
+      name: string
+      path?: string
+      component?: string
+      title: string
+      icon?: string
+      sort?: number
+      enabled?: boolean
+      isHide?: boolean
+      isHideTab?: boolean
+      keepAlive?: boolean
+      link?: string
+      isIframe?: boolean
+      showBadge?: boolean
+      showTextBadge?: string
+      fixedTab?: boolean
+      activePath?: string
+      isFullPage?: boolean
+      authMark?: string
+      roles?: number[] // 关联的角色ID列表
+    }
+
+    /** 更新菜单参数 */
+    type UpdateMenuParams = Partial<CreateMenuParams> & { id: number }
 
     /** 日志审计列表项 */
     interface LogAuditItem {

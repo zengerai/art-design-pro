@@ -43,6 +43,8 @@
 <script setup lang="ts">
   import { useMenuStore } from '@/store/modules/menu'
   import { formatMenuTitle } from '@/utils/router'
+  import { fetchGetRoleMenus, fetchUpdateRoleMenus } from '@/api/system-manage'
+  import { ElMessage } from 'element-plus'
 
   type RoleListItem = Api.SystemManage.RoleListItem
 
@@ -141,10 +143,44 @@
    */
   watch(
     () => props.modelValue,
-    (newVal) => {
+    async (newVal) => {
       if (newVal && props.roleData) {
-        // TODO: 根据角色加载对应的权限数据
-        console.log('设置权限:', props.roleData)
+        try {
+          // 获取角色已有的菜单权限ID
+          const menuIds = await fetchGetRoleMenus(props.roleData.roleId)
+
+          // 将菜单ID转换为菜单name（因为Tree组件使用name作为key）
+          const menuNames: string[] = []
+          const findMenuName = (nodes: any[], id: number): string | null => {
+            for (const node of nodes) {
+              if (node.id === id) {
+                return node.name
+              }
+              if (node.children && node.children.length > 0) {
+                const found = findMenuName(node.children, id)
+                if (found !== null) return found
+              }
+            }
+            return null
+          }
+
+          for (const id of menuIds) {
+            const name = findMenuName(menuList.value as any[], id)
+            if (name) {
+              menuNames.push(name)
+            }
+          }
+
+          // 设置树形组件的选中状态
+          nextTick(() => {
+            if (treeRef.value) {
+              treeRef.value.setCheckedKeys(menuNames)
+            }
+          })
+        } catch (error) {
+          console.error('加载角色权限失败:', error)
+          ElMessage.error('加载权限数据失败')
+        }
       }
     }
   )
@@ -160,11 +196,63 @@
   /**
    * 保存权限配置
    */
-  const savePermission = () => {
-    // TODO: 调用保存权限接口
-    ElMessage.success('权限保存成功')
-    emit('success')
-    handleClose()
+  const savePermission = async () => {
+    try {
+      if (!props.roleData) {
+        ElMessage.warning('角色数据不存在')
+        return
+      }
+
+      // 获取所有选中的菜单name（包括半选状态的父节点）
+      const checkedKeys = treeRef.value.getCheckedKeys()
+      const halfCheckedKeys = treeRef.value.getHalfCheckedKeys()
+      const allKeys = [...checkedKeys, ...halfCheckedKeys]
+
+      // 过滤出实际的菜单name（排除权限按钮的虚拟节点）
+      // 权限按钮的 name 格式为: menuName_authMark
+      const authMarks = ['add', 'edit', 'delete', 'view', 'export', 'import']
+      const validMenuNames = allKeys.filter((key: any) => {
+        const keyStr = String(key)
+        // 如果不包含下划线，是菜单节点
+        if (!keyStr.includes('_')) return true
+        // 如果包含下划线，检查最后一部分是否为权限标识
+        const parts = keyStr.split('_')
+        const lastPart = parts[parts.length - 1]
+        // 如果最后一部分是权限标识，则是权限按钮节点，需要过滤掉
+        return !authMarks.includes(lastPart.toLowerCase())
+      })
+
+      // 将菜单name转换为菜单id
+      const menuIds: number[] = []
+      const findMenuId = (nodes: any[], name: string): number | null => {
+        for (const node of nodes) {
+          if (node.name === name) {
+            return node.id
+          }
+          if (node.children && node.children.length > 0) {
+            const found = findMenuId(node.children, name)
+            if (found !== null) return found
+          }
+        }
+        return null
+      }
+
+      for (const name of validMenuNames) {
+        const id = findMenuId(menuList.value as any[], String(name))
+        if (id !== null && typeof id === 'number') {
+          menuIds.push(id)
+        }
+      }
+
+      // 调用保存接口
+      await fetchUpdateRoleMenus(props.roleData.roleId, menuIds)
+
+      emit('success')
+      handleClose()
+    } catch (error) {
+      console.error('保存权限失败:', error)
+      ElMessage.error('保存权限失败，请重试')
+    }
   }
 
   /**
