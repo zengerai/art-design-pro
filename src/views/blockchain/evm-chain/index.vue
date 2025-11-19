@@ -205,14 +205,15 @@
   }
 
   // 删除
-  const handleDelete = async () => {
+  const handleDelete = async (row: any) => {
     try {
-      await ElMessageBox.confirm('确定要删除该链吗？', '提示', {
+      await ElMessageBox.confirm(`确定要删除 ${row.name} 吗？`, '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       })
       // TODO: 调用实际的删除接口
+      // await deleteChain(row.id)
       ElMessage.success('删除成功')
       refreshData()
     } catch (error) {

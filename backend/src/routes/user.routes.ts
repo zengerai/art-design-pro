@@ -1,8 +1,8 @@
-import { Router } from 'express'
+import { Router, type Router as ExpressRouter } from 'express'
 import * as userController from '../controllers/user.controller.js'
 import { authenticate, authorize } from '../middleware/auth.middleware.js'
 
-const router = Router()
+const router: ExpressRouter = Router()
 
 // 个人中心接口 - 需要认证
 router.get('/info', authenticate, userController.getProfile)
