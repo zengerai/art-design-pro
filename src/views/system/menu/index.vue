@@ -151,6 +151,7 @@
           roles: item.meta?.roles
         },
         _backendId: item.id, // 保存后端ID用于编辑/删除
+        parentId: item.parentId, // 保存父级菜单ID用于编辑时回显
         children: item.children ? convertBackendToFrontend(item.children) : undefined
       }
       return route
@@ -193,7 +194,7 @@
       prop: 'meta.title',
       label: '菜单名称',
       minWidth: 120,
-      formatter: (row: AppRouteRecord) => formatMenuTitle(row.meta?.title)
+      formatter: (row: AppRouteRecord) => formatMenuTitle(row.meta?.title ?? '')
     },
     {
       prop: 'type',
@@ -255,8 +256,8 @@
         return h('div', buttonStyle, [
           h(ArtButtonTable, {
             type: 'add',
-            onClick: () => handleAddAuth(),
-            title: '新增权限'
+            onClick: () => handleAddSubMenu(row),
+            title: '添加子菜单'
           }),
           h(ArtButtonTable, {
             type: 'edit',
@@ -404,14 +405,29 @@
   }
 
   /**
-   * 添加权限按钮
+   * 添加子菜单
+   * @param row 父级菜单数据
    */
-  const handleAddAuth = (): void => {
+  const handleAddSubMenu = (row: AppRouteRecord): void => {
     dialogType.value = 'menu'
-    editData.value = null
-    lockMenuType.value = false
+    // 传递父级菜单ID作为初始数据
+    editData.value = {
+      parentId: row._backendId || row.id,
+      meta: {}
+    }
+    lockMenuType.value = true
     dialogVisible.value = true
   }
+
+  /**
+   * 添加权限按钮
+   */
+  // const handleAddAuth = (): void => {
+  //   dialogType.value = 'menu'
+  //   editData.value = null
+  //   lockMenuType.value = false
+  //   dialogVisible.value = true
+  // }
 
   /**
    * 编辑菜单
@@ -439,27 +455,17 @@
   }
 
   /**
-   * 菜单表单数据类型
-   */
-  interface MenuFormData {
-    name: string
-    path: string
-    component?: string
-    icon?: string
-    roles?: string[]
-    sort?: number
-    [key: string]: any
-  }
-
-  /**
    * 提交表单数据
    * @param formData 表单数据
    */
-  const handleSubmit = async (formData: MenuFormData): Promise<void> => {
+  const handleSubmit = async (formData: any): Promise<void> => {
     try {
       if (editData.value?._backendId) {
         // 编辑模式
-        await fetchUpdateMenu(editData.value._backendId, formData)
+        await fetchUpdateMenu(
+          editData.value._backendId,
+          formData as Api.SystemManage.UpdateMenuParams
+        )
       } else {
         // 创建模式
         await fetchCreateMenu(formData as Api.SystemManage.CreateMenuParams)

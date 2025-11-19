@@ -11,6 +11,7 @@ router.put('/profile', authenticate, userController.updateProfile)
 router.post('/password', authenticate, userController.changePassword)
 router.post('/tags', authenticate, userController.updateTags)
 router.post('/avatar', authenticate, userController.uploadAvatar)
+router.get('/menus', authenticate, userController.getUserMenus)
 
 // 需要超级管理员权限的接口
 router.get('/list', authenticate, authorize('R_SUPER'), userController.getUserList)

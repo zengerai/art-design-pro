@@ -132,7 +132,14 @@ export function fetchUpdateRoleMenus(roleId: number, menuIds: number[]) {
 export function fetchGetMenuTree(params?: { enabledOnly?: boolean }) {
   return request.get<Api.SystemManage.MenuTreeItem[]>({
     url: '/api/menus',
-    params: { mode: 'tree', ...params }
+    params: { returnTree: 'true', ...params }
+  })
+}
+
+// 获取用户菜单（根据用户权限过滤）
+export function fetchGetUserMenus() {
+  return request.get<Api.SystemManage.MenuTreeItem[]>({
+    url: '/api/user/menus'
   })
 }
 

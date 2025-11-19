@@ -61,11 +61,49 @@ export class MenuProcessor {
 
   /**
    * 处理后端控制模式的菜单
-   * 注意：当前后端菜单接口尚未实现，默认返回空数组
+   * 从后端接口加载菜单数据
    */
   private async processBackendMenu(): Promise<AppRouteRecord[]> {
-    console.warn('后端菜单接口尚未实现，请使用前端模式或实现后端接口')
-    return []
+    try {
+      const { fetchGetUserMenus } = await import('@/api/system-manage')
+      const menuList = await fetchGetUserMenus()
+
+      console.log('🔑 使用后端菜单模式，从数据库加载菜单')
+
+      // 转换后端数据为前端路由格式
+      return this.transformBackendMenuToRoutes(menuList)
+    } catch (error) {
+      console.error('获取后端菜单失败:', error)
+      return []
+    }
+  }
+
+  /**
+   * 转换后端菜单数据为前端路由格式
+   */
+  private transformBackendMenuToRoutes(menuList: any[]): AppRouteRecord[] {
+    return menuList.map((item) => {
+      const route: AppRouteRecord = {
+        id: item.id,
+        name: item.name,
+        path: item.path,
+        component: item.component,
+        meta: {
+          ...item.meta,
+          // 确保 icon 字段正确传递
+          icon: item.meta?.icon || item.icon
+        },
+        _backendId: item.id,
+        parentId: item.parentId
+      }
+
+      // 递归处理子菜单
+      if (item.children && item.children.length > 0) {
+        route.children = this.transformBackendMenuToRoutes(item.children)
+      }
+
+      return route
+    })
   }
 
   /**

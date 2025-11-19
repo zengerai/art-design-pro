@@ -4,6 +4,8 @@ import { systemDashboardRoutes } from './system-dashboard'
 import { userDashboardRoutes } from './user-dashboard'
 // 系统基础路由模块
 import { systemRoutes } from './system'
+// 区块链管理路由模块
+import { blockchainRoutes } from './blockchain'
 // import { exceptionRoutes } from './exception' // 异常页面已注释
 
 // 以下为模板示例路由模块，已注释
@@ -22,7 +24,8 @@ import { systemRoutes } from './system'
 export const routeModules: AppRouteRecord[] = [
   systemDashboardRoutes, // 系统后台管理员工作台
   userDashboardRoutes, // 用户工作台
-  systemRoutes // 系统管理模块
+  systemRoutes, // 系统管理模块
+  blockchainRoutes // 区块链管理模块
   // 模板示例路由已注释
   // exceptionRoutes,     // 异常页面已注释
   // dashboardRoutes,

@@ -2,22 +2,35 @@
 
 <cite>
 **本文档引用的文件**
-- [menu.controller.ts](file://backend/src/controllers/menu.controller.ts)
+- [menu.controller.ts](file://backend/src/controllers/menu.controller.ts) - *更新了权限模型和超级管理员限制*
 - [menu.routes.ts](file://backend/src/routes/menu.routes.ts)
 - [menu.util.ts](file://backend/src/utils/menu.util.ts)
 - [menu.ts](file://src/store/modules/menu.ts)
 - [MenuProcessor.ts](file://src/router/core/MenuProcessor.ts)
 - [asyncRoutes.ts](file://src/router/routes/asyncRoutes.ts)
 - [index.vue](file://src/views/system/menu/index.vue)
-- [menu-dialog.vue](file://src/views/system/menu/modules/menu-dialog.vue)
+- [menu-dialog.vue](file://src/views/system/menu/modules/menu-dialog.vue) - *更新了角色权限配置为roleIds*
 - [art-sidebar-menu/index.vue](file://src/components/core/layouts/art-menus/art-sidebar-menu/index.vue)
 - [art-horizontal-menu/index.vue](file://src/components/core/layouts/art-menus/art-horizontal-menu/index.vue)
-- [system-manage.ts](file://src/api/system-manage.ts)
+- [system-manage.ts](file://src/api/system-manage.ts) - *更新了API参数类型*
 - [useRolePermission.ts](file://src/hooks/core/useRolePermission.ts)
 - [init-database.sql](file://scripts/init-database.sql)
 - [router/index.ts](file://src/router/index.ts)
 - [index.ts](file://src/types/router/index.ts)
+- [role.controller.ts](file://backend/src/controllers/role.controller.ts) - *更新了角色权限管理接口*
+- [auth.middleware.ts](file://backend/src/middleware/auth.middleware.ts) - *增强了超级管理员权限验证*
+- [api.d.ts](file://src/types/api/api.d.ts) - *更新了CreateMenuParams和UpdateMenuParams类型*
 </cite>
+
+## 更新摘要
+
+**变更内容**
+
+- 将权限模型从roleCode转换为roleIds，使用角色ID进行权限关联
+- 增强超级管理员权限限制，仅R_SUPER角色可进行菜单管理操作
+- 更新前端表单和API接口以支持新的权限模型
+- 修改数据库查询逻辑，从角色编码匹配改为角色ID匹配
+- 更新相关文档和代码注释以反映变更
 
 ## 目录
 
@@ -42,7 +55,7 @@
 
 - **多层级菜单结构**：支持无限级菜单嵌套，自动构建树形结构
 - **灵活的菜单类型**：目录、页面、外链、内嵌、权限按钮等多种类型
-- **权限控制**：基于角色的细粒度权限管理
+- **权限控制**：基于角色ID的细粒度权限管理
 - **动态路由**：运行时动态加载和卸载路由
 - **前后端分离**：支持前端权限模式和后端权限模式
 - **国际化支持**：菜单标题支持国际化
@@ -235,7 +248,7 @@ interface CreateMenuParams {
   activePath?: string
   isFullPage?: boolean
   authMark?: string
-  roles?: string[]
+  roles?: number[] // 角色ID数组，替换原有的roleCode字符串数组
 }
 ```
 
@@ -258,15 +271,15 @@ interface CreateMenuParams {
 
 ### 权限验证机制
 
-系统实现了严格的权限验证机制，确保只有授权用户才能执行敏感操作。
+系统实现了严格的权限验证机制，确保只有授权用户才能执行敏感操作。超级管理员权限已增强，仅R_SUPER角色可进行菜单管理操作。
 
 ```mermaid
 flowchart TD
 A[请求到达] --> B{用户认证}
 B --> |未认证| C[返回401]
 B --> |已认证| D{角色检查}
-D --> |非管理员| E[返回403]
-D --> |管理员| F[执行业务逻辑]
+D --> |非超级管理员| E[返回403]
+D --> |超级管理员| F[执行业务逻辑]
 F --> G{数据库操作}
 G --> |成功| H[返回200]
 G --> |失败| I[返回错误]
@@ -356,7 +369,7 @@ F --> L
 
 ### 权限模型
 
-系统采用基于角色的访问控制（RBAC）模型，通过菜单角色关联表实现细粒度的权限控制。
+系统采用基于角色ID的访问控制模型，通过菜单角色关联表实现细粒度的权限控制。权限模型已从基于roleCode的字符串匹配改为基于roleIds的整数ID匹配。
 
 ```mermaid
 erDiagram
@@ -420,7 +433,7 @@ end
 
 ### 角色权限配置
 
-系统支持灵活的角色权限配置，管理员可以通过图形界面为不同角色分配菜单权限。
+系统支持灵活的角色权限配置，管理员可以通过图形界面为不同角色分配菜单权限。角色权限配置已更新为使用角色ID数组（roleIds）而非角色编码（roleCode）。
 
 **节来源**
 
@@ -523,7 +536,7 @@ F --> |有权限| H[加载页面]
 
 ### 后端权限验证
 
-后端同样实现了严格的权限验证，确保即使前端绕过也能保证安全性。
+后端同样实现了严格的权限验证，确保即使前端绕过也能保证安全性。超级管理员权限已增强，仅R_SUPER角色可进行菜单管理操作。
 
 **验证层次**：
 

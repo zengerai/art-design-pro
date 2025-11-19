@@ -246,6 +246,23 @@ declare namespace Api {
     interface MenuTreeItem extends MenuListItem {
       children?: MenuTreeItem[]
       meta?: {
+        title?: string
+        icon?: string
+        sort?: number
+        isHide?: boolean
+        isHideTab?: boolean
+        keepAlive?: boolean
+        link?: string
+        isIframe?: boolean
+        showBadge?: boolean
+        showTextBadge?: string
+        fixedTab?: boolean
+        activePath?: string
+        isFullPage?: boolean
+        authMark?: string
+        roles?: string[]
+        isEnable?: boolean
+        isMenu?: boolean
         authList?: Array<{
           title: string
           authMark: string

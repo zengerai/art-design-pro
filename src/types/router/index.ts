@@ -28,9 +28,11 @@ import { RouteRecordRaw } from 'vue-router'
  */
 export interface RouteMeta extends Record<string | number | symbol, unknown> {
   /** 路由标题 */
-  title: string
+  title?: string
   /** 路由图标 */
   icon?: string
+  /** 排序号 */
+  sort?: number
   /** 是否显示徽章 */
   showBadge?: boolean
   /** 文本徽章 */
@@ -45,10 +47,15 @@ export interface RouteMeta extends Record<string | number | symbol, unknown> {
   isIframe?: boolean
   /** 是否缓存 */
   keepAlive?: boolean
+  /** 是否启用 */
+  isEnable?: boolean
+  /** 是否为菜单 */
+  isMenu?: boolean
   /** 操作权限 */
   authList?: Array<{
     title: string
     authMark: string
+    sort?: number
   }>
   /** 是否为一级菜单 */
   isFirstLevel?: boolean
@@ -74,9 +81,11 @@ export interface RouteMeta extends Record<string | number | symbol, unknown> {
  */
 export interface AppRouteRecord extends Omit<RouteRecordRaw, 'meta' | 'children' | 'component'> {
   id?: number
-  meta: RouteMeta
+  meta?: RouteMeta
   children?: AppRouteRecord[]
   component?: string | (() => Promise<any>)
   /** 后端ID（用于编辑/删除操作） */
   _backendId?: number
+  /** 父级菜单ID */
+  parentId?: number
 }

@@ -2,17 +2,29 @@
 
 <cite>
 **本文档引用的文件**
-- [src/views/system/user-center/index.vue](file://src/views/system/user-center/index.vue)
-- [backend/src/controllers/user.controller.ts](file://backend/src/controllers/user.controller.ts)
-- [backend/src/routes/user.routes.ts](file://backend/src/routes/user.routes.ts)
-- [src/store/modules/user.ts](file://src/store/modules/user.ts)
-- [src/hooks/core/useAuth.ts](file://src/hooks/core/useAuth.ts)
-- [src/api/system-manage.ts](file://src/api/system-manage.ts)
-- [src/types/api/api.d.ts](file://src/types/api/api.d.ts)
-- [src/views/system/user/index.vue](file://src/views/system/user/index.vue)
-- [src/views/system/user/modules/user-dialog.vue](file://src/views/system/user/modules/user-dialog.vue)
-- [src/views/system/user/modules/user-search.vue](file://src/views/system/user/modules/user-search.vue)
+- [src/views/system/user-center/index.vue](file://src/views/system/user-center/index.vue) - *用户中心页面*
+- [backend/src/controllers/user.controller.ts](file://backend/src/controllers/user.controller.ts) - *用户控制器，包含用户状态字段处理逻辑*
+- [backend/src/routes/user.routes.ts](file://backend/src/routes/user.routes.ts) - *用户路由定义*
+- [src/store/modules/user.ts](file://src/store/modules/user.ts) - *用户状态管理模块*
+- [src/hooks/core/useAuth.ts](file://src/hooks/core/useAuth.ts) - *权限验证钩子*
+- [src/api/system-manage.ts](file://src/api/system-manage.ts) - *系统管理API接口*
+- [src/types/api/api.d.ts](file://src/types/api/api.d.ts) - *API类型定义*
+- [src/views/system/user/index.vue](file://src/views/system/user/index.vue) - *用户管理页面，包含用户状态字段实现*
+- [src/views/system/user/modules/user-dialog.vue](file://src/views/system/user/modules/user-dialog.vue) - *用户对话框组件，包含状态选择功能*
+- [src/views/system/user/modules/user-search.vue](file://src/views/system/user/modules/user-search.vue) - *用户搜索组件，包含状态筛选功能*
+- [项目文档/字段映射与转换规则.md](file://项目文档/字段映射与转换规则.md) - *新增用户状态字段映射规则*
+- [项目文档/API文档更新说明.md](file://项目文档/API文档更新说明.md) - *更新用户状态字段的API说明*
 </cite>
+
+## 更新摘要
+
+**变更内容**
+
+- 在用户管理功能中新增了用户状态字段（启用/禁用）的实现细节
+- 更新了用户列表、用户编辑和用户搜索组件以支持状态字段
+- 新增了前后端接口中关于用户状态的参数和响应处理
+- 更新了用户状态管理的状态图和表格
+- 新增了用户状态字段的转换规则和显示逻辑
 
 ## 目录
 
@@ -257,25 +269,85 @@ UserManager --> UserSearch
 
 ```mermaid
 stateDiagram-v2
-[*] --> 在线
-在线 --> 离线 : 用户登出
-在线 --> 异常 : 系统异常
-在线 --> 注销 : 管理员操作
-离线 --> 在线 : 用户登录
-离线 --> 注销 : 管理员操作
-异常 --> 在线 : 系统恢复
-异常 --> 注销 : 管理员操作
-注销 --> [*]
+[*] --> 启用
+启用 --> 禁用 : 管理员操作
+禁用 --> 启用 : 管理员操作
+禁用 --> [*]
+启用 --> [*]
 ```
 
 **图表来源**
 
 - [src/views/system/user/index.vue](file://src/views/system/user/index.vue#L76-L95)
+- [backend/src/controllers/user.controller.ts](file://backend/src/controllers/user.controller.ts#L288-L288)
 
 **章节来源**
 
 - [src/views/system/user/index.vue](file://src/views/system/user/index.vue#L1-L336)
 - [src/views/system/user/modules/user-dialog.vue](file://src/views/system/user/modules/user-dialog.vue#L1-L186)
+- [项目文档/字段映射与转换规则.md](file://项目文档/字段映射与转换规则.md#L84-L86)
+
+### 用户状态字段实现
+
+在用户管理功能中，新增了用户状态字段（启用/禁用）的实现，具体包括：
+
+#### 1. 前端实现
+
+- **状态显示**：在用户列表中添加状态列，使用Element Plus的Tag组件显示"启用"或"禁用"
+- **状态筛选**：在搜索组件中添加状态下拉选择框，支持按状态筛选用户
+- **状态编辑**：在用户编辑对话框中添加状态选择器，支持修改用户状态
+
+#### 2. 后端实现
+
+- **数据库字段**：在users表中添加status字段，类型为TINYINT，1表示启用，0表示禁用
+- **查询接口**：getUserList接口支持按status参数筛选用户
+- **创建接口**：createUser接口支持传入status参数，未传入时默认为1（启用）
+- **更新接口**：updateUser接口支持更新status字段
+
+#### 3. 类型定义
+
+在API类型定义中，新增了用户状态字段的相关类型：
+
+```typescript
+// 用户列表项
+interface UserListItem {
+  id: number
+  avatar: string
+  status: string // 状态：1-启用，0-禁用
+  userName: string
+  userGender: number // 性别：1-男，2-女
+  nickName: string
+  userPhone: string
+  userEmail: string
+  userRoles: string[]
+  createTime: string
+  updateTime: string
+}
+
+// 创建用户参数
+interface CreateUserParams {
+  username: string
+  phone: string
+  gender: number // 性别：1-男，2-女
+  role: string[]
+  status?: number // 状态：1-启用，0-禁用
+}
+
+// 更新用户参数
+interface UpdateUserParams {
+  username: string
+  phone: string
+  gender: number // 性别：1-男，2-女
+  role?: string[]
+  status?: number // 状态：1-启用，0-禁用
+}
+```
+
+**章节来源**
+
+- [src/types/api/api.d.ts](file://src/types/api/api.d.ts#L98-L131)
+- [backend/src/controllers/user.controller.ts](file://backend/src/controllers/user.controller.ts#L171-L173)
+- [src/views/system/user/index.vue](file://src/views/system/user/index.vue#L171-L176)
 
 ## 权限管理
 
@@ -412,6 +484,7 @@ interface UserProfile {
   address: string
   description: string
   tags: string[]
+  status: string // 用户状态：1-启用，0-禁用
 }
 ```
 

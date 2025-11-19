@@ -25,6 +25,9 @@
           <ElRadioButton value="button" label="button">按钮</ElRadioButton>
         </ElRadioGroup>
       </template>
+      <template #icon>
+        <ArtIconPicker v-model="form.icon" placeholder="请选择图标" />
+      </template>
     </ArtForm>
 
     <template #footer>
@@ -38,14 +41,15 @@
 
 <script setup lang="ts">
   import type { FormRules } from 'element-plus'
-  import { ElIcon, ElTooltip } from 'element-plus'
+  import { ElIcon, ElTooltip, ElMessage } from 'element-plus'
   import { QuestionFilled } from '@element-plus/icons-vue'
   import { formatMenuTitle } from '@/utils/router'
   import type { AppRouteRecord } from '@/types/router'
   import type { FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtForm from '@/components/core/forms/art-form/index.vue'
+  import ArtIconPicker from '@/components/core/forms/art-icon-picker/index.vue'
   import { useWindowSize } from '@vueuse/core'
-  import { fetchGetRoleList } from '@/api/system-manage'
+  import { fetchGetRoleList, fetchGetMenuTree } from '@/api/system-manage'
 
   const { width } = useWindowSize()
 
@@ -58,6 +62,30 @@
     }))
   )
 
+  // 菜单列表数据（用于父级菜单选择）
+  const menuList = ref<any[]>([])
+  const parentMenuOptions = computed(() => {
+    const flattenMenus = (menus: any[], level = 0): any[] => {
+      return menus.reduce((acc: any[], menu) => {
+        // 只有菜单类型可以作为父级，不包括按钮类型
+        if (!menu.meta?.isAuthButton) {
+          const prefix = '　'.repeat(level) // 使用全角空格缩进
+          const menuName = formatMenuTitle(menu.meta?.title) || String(menu.name || '')
+          acc.push({
+            label: prefix + menuName,
+            value: menu._backendId || menu.id
+          })
+          // 递归处理子菜单
+          if (menu.children && menu.children.length > 0) {
+            acc.push(...flattenMenus(menu.children, level + 1))
+          }
+        }
+        return acc
+      }, [])
+    }
+    return flattenMenus(menuList.value)
+  })
+
   // 获取角色列表
   const getRoleList = async () => {
     try {
@@ -68,9 +96,19 @@
     }
   }
 
-  // 组件挂载时获取角色列表
+  // 获取菜单列表
+  const getMenuList = async () => {
+    try {
+      menuList.value = await fetchGetMenuTree()
+    } catch (error) {
+      console.error('获取菜单列表失败:', error)
+    }
+  }
+
+  // 组件挂载时获取数据
   onMounted(() => {
     getRoleList()
+    getMenuList()
   })
 
   /**
@@ -96,6 +134,7 @@
 
   interface MenuFormData {
     id: number
+    parentId: number | null // 父级菜单ID
     name: string
     path: string
     label: string
@@ -147,6 +186,7 @@
   const form = reactive<MenuFormData & { menuType: 'menu' | 'button' }>({
     menuType: 'menu',
     id: 0,
+    parentId: null,
     name: '',
     path: '',
     label: '',
@@ -195,6 +235,17 @@
     if (form.menuType === 'menu') {
       return [
         ...baseItems,
+        {
+          label: createLabelTooltip('父级菜单', '留空为一级菜单\n选择父级菜单创建子菜单'),
+          key: 'parentId',
+          type: 'select',
+          props: {
+            placeholder: '请选择父级菜单（留空为一级菜单）',
+            clearable: true,
+            filterable: true,
+            options: parentMenuOptions.value
+          }
+        },
         { label: '菜单名称', key: 'name', type: 'input', props: { placeholder: '菜单名称' } },
         {
           label: createLabelTooltip(
@@ -215,7 +266,7 @@
           type: 'input',
           props: { placeholder: '如：/system/user 或留空' }
         },
-        { label: '图标', key: 'icon', type: 'input', props: { placeholder: '如：ri:user-line' } },
+        { label: '图标', key: 'icon' },
         {
           label: createLabelTooltip(
             '角色权限',
@@ -330,11 +381,12 @@
   const loadFormData = (): void => {
     if (!props.editData) return
 
-    isEdit.value = true
+    isEdit.value = !props.editData.parentId || !!props.editData._backendId // 如果只有parentId说明是新增子菜单
 
     if (form.menuType === 'menu') {
       const row = props.editData
-      form.id = row.id || 0
+      form.id = row.id || row._backendId || 0
+      form.parentId = row.parentId || null
       form.name = formatMenuTitle(row.meta?.title || '')
       form.path = row.path || ''
       form.label = row.name || ''
@@ -376,6 +428,7 @@
       // 转换前端表单字段到后端API字段
       const submitData: any = {
         menuType: form.menuType,
+        parentId: form.parentId, // 父级菜单ID
         title: form.name, // 前端的name字段对应后端的title
         name: form.label, // 前端的label字段对应后端的name
         path: form.path,

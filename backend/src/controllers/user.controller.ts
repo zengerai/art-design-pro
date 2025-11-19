@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth.middleware.js'
 import { createError } from '../middleware/error.middleware.js'
 import { hashPassword, comparePassword } from '../utils/auth.util.js'
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
+import { buildMenuTree, convertIntToBoolean } from '../utils/menu.util.js'
 
 /**
  * 获取用户列表
@@ -381,6 +382,78 @@ export async function resetPassword(req: AuthRequest, res: Response, next: NextF
     ])
 
     res.json({ code: 200, message: '密码已重置为123456' })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * 获取用户菜单（根据用户角色过滤）
+ */
+export async function getUserMenus(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const roleCode = req.user?.roleCode
+
+    // 查询用户有权限的菜单（仅包含启用的菜单和按钮）
+    const [records] = await pool.execute<RowDataPacket[]>(
+      `SELECT 
+        m.id, m.parent_id as parentId, m.menu_type as menuType,
+        m.name, m.path, m.component, m.title, m.icon, m.sort,
+        m.enabled, m.is_hide as isHide, m.is_hide_tab as isHideTab,
+        m.keep_alive as keepAlive, m.link, m.is_iframe as isIframe,
+        m.show_badge as showBadge, m.show_text_badge as showTextBadge,
+        m.fixed_tab as fixedTab, m.active_path as activePath,
+        m.is_full_page as isFullPage, m.auth_mark as authMark,
+        GROUP_CONCAT(r.role_code) as roles
+      FROM menus m
+      INNER JOIN menu_roles mr ON m.id = mr.menu_id
+      INNER JOIN roles r ON mr.role_id = r.id
+      WHERE r.role_code = ? AND m.enabled = 1
+      GROUP BY m.id
+      ORDER BY m.parent_id ASC, m.sort ASC`,
+      [roleCode]
+    )
+
+    // 转换数据格式
+    const processedRecords = records.map((r) => {
+      const converted = convertIntToBoolean(r)
+      return {
+        id: converted.id,
+        name: converted.name,
+        path: converted.path,
+        component: converted.component,
+        menuType: converted.menuType,
+        title: converted.title,
+        sort: converted.sort,
+        meta: {
+          title: converted.title,
+          icon: converted.icon,
+          sort: converted.sort,
+          isHide: converted.isHide,
+          isHideTab: converted.isHideTab,
+          keepAlive: converted.keepAlive,
+          link: converted.link,
+          isIframe: converted.isIframe,
+          showBadge: converted.showBadge,
+          showTextBadge: converted.showTextBadge,
+          fixedTab: converted.fixedTab,
+          activePath: converted.activePath,
+          isFullPage: converted.isFullPage,
+          authMark: converted.authMark,
+          roles: converted.roles ? converted.roles.split(',') : []
+        },
+        parentId: converted.parentId,
+        authMark: converted.authMark
+      }
+    })
+
+    // 构建树形结构
+    const tree = buildMenuTree(processedRecords)
+
+    res.json({
+      code: 200,
+      data: tree
+    })
   } catch (error) {
     next(error)
   }
