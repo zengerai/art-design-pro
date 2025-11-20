@@ -790,7 +790,7 @@ DOM优化：
   - 执行数据库表结构DDL操作（CREATE TABLE、ALTER TABLE）
   - 执行数据库DML操作（INSERT、UPDATE、DELETE、SELECT）
   - 查询数据库表结构和数据
-  - 基于新建的表，更新初始化数据库脚本（scripts/init-database.sql）
+  - 基于新建的表，更新初始化数据库脚本（scripts/init-database.sql）。注意不是用初始化脚本重新建表。
 - 连接配置：读取项目根目录.env.development文件中的数据库配置
 
 浏览器调试工具：

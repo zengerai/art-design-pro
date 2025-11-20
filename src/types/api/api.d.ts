@@ -428,4 +428,81 @@ declare namespace Api {
       description: string
     }
   }
+
+  /** EVM钱包监控类型 */
+  namespace Wallet {
+    /** 钱包监控记录 */
+    interface WalletRecord {
+      id: string
+      walletAddress: string
+      ownership: string[]
+      lastQueryTime: string | null
+      totalValue: number
+      mainChains: string[]
+      addressActivity: number
+      activityTags: string[]
+      categoryTags: string[]
+      status: string[]
+      alertMark: string[]
+      remark: string
+      createdAt: string
+      updatedAt: string
+    }
+
+    /** 钱包列表响应 */
+    interface WalletListResponse {
+      records: WalletRecord[]
+      total: number
+      hasMore: boolean
+    }
+
+    /** 查询参数 */
+    interface QueryParams {
+      offset?: number
+      limit?: number
+      filterCondition?: {
+        ownership?: string[]
+        mainChains?: string[]
+        status?: string[]
+      }
+      sortRules?: Array<{
+        field: string
+        order: 'asc' | 'desc'
+      }>
+    }
+
+    /** 创建钱包参数 */
+    interface CreateWalletParams {
+      walletAddress: string
+      ownership?: string[]
+      lastQueryTime?: string
+      totalValue?: number
+      mainChains?: string[]
+      addressActivity?: number
+      activityTags?: string[]
+      categoryTags?: string[]
+      status?: string[]
+      alertMark?: string[]
+      remark?: string
+    }
+
+    /** 更新钱包参数 */
+    interface UpdateWalletParams {
+      walletAddress: string
+      updateFields: Partial<Omit<WalletRecord, 'id' | 'walletAddress' | 'createdAt' | 'updatedAt'>>
+    }
+
+    /** 批量更新参数 */
+    interface BatchUpdateParams {
+      walletAddresses: string[]
+      updateFields: {
+        [key: string]:
+          | any
+          | {
+              operation: 'append' | 'replace'
+              value: any
+            }
+      }
+    }
+  }
 }

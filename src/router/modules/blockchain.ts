@@ -22,6 +22,16 @@ export const blockchainRoutes: AppRouteRecord = {
         icon: 'ri:link',
         keepAlive: true
       }
+    },
+    {
+      name: 'WalletMonitoring',
+      path: 'wallet-monitoring',
+      component: '/blockchain/wallet-monitoring/index',
+      meta: {
+        title: 'EVM钱包监控',
+        icon: 'ri:wallet-3-line',
+        keepAlive: true
+      }
     }
   ]
 }

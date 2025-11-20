@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes.js'
 import userRoutes from './routes/user.routes.js'
 import roleRoutes from './routes/role.routes.js'
 import menuRoutes from './routes/menu.routes.js'
+import walletRoutes from './routes/wallet.routes.js'
 import { errorHandler } from './middleware/error.middleware.js'
 
 // 加载环境变量
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/user', userRoutes)
 app.use('/api/role', roleRoutes)
 app.use('/api/menus', menuRoutes)
+app.use('/api/wallet', walletRoutes)
 
 // 健康检查
 app.get('/health', (req: Request, res: Response) => {

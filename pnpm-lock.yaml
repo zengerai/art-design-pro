@@ -34,6 +34,9 @@ importers:
       crypto-js:
         specifier: ^4.2.0
         version: 4.2.0
+      dayjs:
+        specifier: ^1.11.19
+        version: 1.11.19
       echarts:
         specifier: ^6.0.0
         version: 6.0.0
@@ -2810,10 +2813,10 @@ packages:
       }
     engines: { node: '>=12' }
 
-  dayjs@1.11.18:
+  dayjs@1.11.19:
     resolution:
       {
-        integrity: sha512-zFBQ7WFRvVRhKcWoUh+ZA1g2HVgUbsZm9sbddh8EC5iv93sui8DVVz1Npvz+r6meo9VKfa8NyLWBsQK1VvIKPA==
+        integrity: sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw==
       }
 
   de-indent@1.0.2:
@@ -8074,7 +8077,7 @@ snapshots:
 
   dargs@8.1.0: {}
 
-  dayjs@1.11.18: {}
+  dayjs@1.11.19: {}
 
   de-indent@1.0.2: {}
 
@@ -8175,7 +8178,7 @@ snapshots:
       '@types/lodash-es': 4.17.12
       '@vueuse/core': 9.13.0(vue@3.5.22(typescript@5.6.3))
       async-validator: 4.2.5
-      dayjs: 1.11.18
+      dayjs: 1.11.19
       escape-html: 1.0.3
       lodash: 4.17.21
       lodash-es: 4.17.21

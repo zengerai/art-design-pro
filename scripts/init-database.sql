@@ -148,6 +148,37 @@ CREATE TABLE menu_roles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='菜单角色关联表';
 
 -- ==========================================
+-- 7. 创建EVM钱包监控表 (wallet_monitoring)
+-- ==========================================
+DROP TABLE IF EXISTS wallet_monitoring;
+
+CREATE TABLE wallet_monitoring (
+  id VARCHAR(36) PRIMARY KEY COMMENT '逻辑主键UUID',
+  walletAddress VARCHAR(42) NOT NULL UNIQUE COMMENT '钱包地址',
+  ownership JSON COMMENT '归属标签（JSON数组）',
+  lastQueryTime DATETIME DEFAULT NULL COMMENT '查询更新时间',
+  totalValue DECIMAL(20,2) DEFAULT 0 COMMENT '钱包总价值USD',
+  mainChains JSON COMMENT '主链列表（JSON数组）',
+  addressActivity INT DEFAULT 0 COMMENT '地址活跃天数',
+  activityTags JSON COMMENT '活动标签（JSON数组）',
+  categoryTags JSON COMMENT '分类标签（JSON数组）',
+  status JSON COMMENT '状态标签（JSON数组）',
+  alertMark JSON COMMENT '警报标记（JSON数组）',
+  remark TEXT COMMENT '备注信息',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_wallet_address (walletAddress),
+  INDEX idx_created_at (createdAt),
+  INDEX idx_updated_at (updatedAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='EVM钱包监控表';
+
+-- 插入测试数据
+INSERT INTO wallet_monitoring (id, walletAddress, ownership, lastQueryTime, totalValue, mainChains, addressActivity, activityTags, categoryTags, status, alertMark, remark) VALUES
+(UUID(), '0xB23c45E67fA90123bCdE4567aBcD8901eF234567', JSON_ARRAY('个人'), '2025-10-20 10:00:00', 122.00, JSON_ARRAY('BASE', 'ARB', 'OP', 'LINEA'), 365, JSON_ARRAY('L0', 'BASE'), JSON_ARRAY('已归集'), JSON_ARRAY('休眠中'), JSON_ARRAY('正常'), '每周查询一次'),
+(UUID(), '0xD45e67A89bC34567dEfA0123aBcD6789eF012345', JSON_ARRAY('外部'), '2025-10-20 10:00:00', 144.00, JSON_ARRAY('ETH', 'ARB'), 180, JSON_ARRAY('ZKS'), JSON_ARRAY('女巫号'), JSON_ARRAY('休眠中'), JSON_ARRAY('异常交互'), ''),
+(UUID(), '0xA12b34C56dE78F90aBcD1234eF5678aBcD123456', JSON_ARRAY('团队'), '2025-10-20 10:00:00', 155.00, JSON_ARRAY('OP', 'LINEA'), 1, JSON_ARRAY('L0', 'ZKS'), JSON_ARRAY('精品号'), JSON_ARRAY('进行中'), JSON_ARRAY('正常'), '');
+
+-- ==========================================
 -- 初始化完成提示
 -- ==========================================
 -- 数据库初始化完成！
