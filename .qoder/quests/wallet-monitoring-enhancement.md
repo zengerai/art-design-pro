@@ -4,6 +4,27 @@
 
 本文档针对EVM链钱包监控功能的未完成部分，提供详细的实现方案。根据完成情况检查报告，核心功能（P0）已100%完成，本设计将重点完善P1重要功能和部分P2增强功能。
 
+## 设计原则
+
+### 核心设计理念
+
+1. **UI风格一致性**：所有新增功能必须保持与现有系统UI风格的一致性，使用统一的色彩体系、间距规范和交互模式
+2. **组件复用优先**：充分复用现有表格组件能力（ArtTable、ArtTableHeader、useTable Hook），避免重复造轮
+3. **渐进式增强**：按优先级分阶段实施，优先实现核心功能，确保每个阶段都能独立交付可用版本
+4. **响应式设计**：所有界面必须适配不同屏幕尺寸（桌面端、平板、小屏），使用Tailwind CSS响应式工具类
+5. **性能优先**：避免不必要的DOM渲染和API请求，合理使用缓存和虚拟化技术
+6. **可维护性**：代码结构清晰，遵循单一职责原则，提供完善的TypeScript类型定义
+
+### 技术约束
+
+- **前端框架**：Vue 3 Composition API
+- **UI组件库**：Element Plus + Tailwind CSS
+- **状态管理**：Pinia（仅在必要时创建新模块）
+- **类型系统**：TypeScript（严格模式）
+- **表格组件**：复用ArtTable及其配套组件
+- **HTTP请求**：使用项目统一的request工具
+- **表单验证**：使用Element Plus FormRules
+
 ## 当前完成情况总结
 
 ### 已完成功能
@@ -1557,3 +1578,188 @@ SQL脚本应放置在`scripts/`目录下，按功能模块分文件管理。
 - Sortablejs官方文档：https://sortablejs.github.io/Sortable/
 - MySQL JSON类型文档：https://dev.mysql.com/doc/refman/5.7/en/json.html
 - Etherscan API文档：https://docs.etherscan.io/
+
+---
+
+## 开发工具与环境配置
+
+### MCP工具使用规范
+
+本项目集成了多个MCP（Model Context Protocol）工具，用于辅助开发、测试和调试。开发过程中必须遵循以下工具使用规范。
+
+#### 1. 数据库操作工具（mysql-mcp）
+
+**工具职责**：负责所有数据库相关操作
+
+**适用场景**：
+
+- 创建和修改数据库表结构（DDL操作）
+  - CREATE TABLE：创建新表（如field_metadata、enum_values等）
+  - ALTER TABLE：修改表结构（添加字段、修改字段类型、添加索引）
+  - DROP TABLE：删除表（谨慎使用，仅在开发环境）
+- 数据库数据操作（DML操作）
+  - INSERT：插入初始化数据、测试数据
+  - UPDATE：更新配置数据
+  - DELETE：清理无效数据
+  - SELECT：查询数据验证功能正确性
+- 查询表结构和元数据
+  - DESCRIBE TABLE：查看表结构
+  - SHOW CREATE TABLE：查看建表语句
+  - SHOW INDEX：查看索引信息
+- 维护初始化脚本
+  - 基于新建的表，更新`scripts/init-database.sql`
+  - 注意：不是用初始化脚本重新建表，而是追加新的DDL语句到脚本中
+
+**连接配置**：
+
+- 配置文件路径：`/Users/yy/walletPro/art-design-pro/.env.development`
+- 读取数据库连接参数：DB_HOST、DB_PORT、DB_USER、DB_PASSWORD、DB_NAME
+
+**使用示例**：
+
+```sql
+-- 示例1：创建枚举值表
+CREATE TABLE enum_values (
+  id VARCHAR(36) PRIMARY KEY,
+  fieldName VARCHAR(100) NOT NULL,
+  value VARCHAR(200) NOT NULL,
+  label VARCHAR(200) NOT NULL,
+  color VARCHAR(50),
+  sortOrder INT DEFAULT 0,
+  isActive TINYINT(1) DEFAULT 1,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_field_value (fieldName, value),
+  INDEX idx_fieldName (fieldName)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 示例2：插入初始化数据
+INSERT INTO enum_values (id, fieldName, value, label, color, sortOrder) VALUES
+  (UUID(), 'ownership', '个人', '个人', 'primary', 1),
+  (UUID(), 'ownership', '团队', '团队', 'success', 2);
+
+-- 示例3：查询验证
+SELECT * FROM enum_values WHERE fieldName = 'ownership' ORDER BY sortOrder;
+```
+
+**注意事项**：
+
+- 所有DDL操作前必须先备份数据（生产环境）
+- 表名使用蛇形命名法（snake_case）
+- 字段名使用驼峰命名法（camelCase）
+- 所有表必须包含createdAt和updatedAt时间戳字段
+- 外键关联使用VARCHAR(36)存储UUID
+- 为高频查询字段添加索引
+
+#### 2. 浏览器调试工具（chrome-devtools-mcp）
+
+**工具职责**：前端页面交互测试和UI验证
+
+**适用场景**：
+
+- **前端页面交互测试**
+  - 测试按钮点击事件（新增、编辑、删除、批量操作）
+  - 测试表单提交流程
+  - 测试对话框打开/关闭
+  - 测试路由跳转
+- **UI组件渲染效果验证**
+  - 验证表格列显示正确性
+  - 验证样式和布局符合设计规范
+  - 验证响应式布局在不同屏幕尺寸下的表现
+  - 验证主题色切换效果
+- **表格编辑功能测试**
+  - 测试可编辑单元格的编辑/保存/取消
+  - 测试单元格内联编辑器（文本、数字、日期、多选）
+  - 测试数据验证和错误提示
+- **导入导出功能测试**
+  - 测试Excel文件上传
+  - 测试字段映射配置
+  - 测试数据预览
+  - 测试导出功能
+- **视图切换交互验证**
+  - 测试Tab视图切换
+  - 测试侧边栏分组展开/折叠
+  - 测试筛选条件应用
+- **浏览器兼容性测试**
+  - Chrome最新版
+  - Firefox最新版
+  - Safari最新版（macOS）
+  - Edge最新版
+
+**使用流程**：
+
+1. 启动开发服务器：`pnpm dev`（默认端口3008）
+2. 使用chrome-devtools-mcp工具打开页面
+3. 执行交互操作（点击、输入、提交）
+4. 验证UI渲染效果
+5. 检查控制台错误信息
+6. 截图记录测试结果
+
+**测试检查清单**：
+
+- [ ] 页面加载无错误
+- [ ] 表格数据正确展示
+- [ ] 按钮交互正常
+- [ ] 表单验证生效
+- [ ] API请求成功
+- [ ] 错误提示友好
+- [ ] 响应式布局适配
+- [ ] 性能指标达标（首次渲染<1秒）
+
+#### 3. 代码文档查询工具（context7）
+
+**工具职责**：查询技术文档和最佳实践
+
+**适用场景**：
+
+- **查询框架和库的官方文档**
+  - Vue 3 Composition API文档
+  - TypeScript类型系统文档
+  - Element Plus组件API文档
+  - Pinia状态管理文档
+- **查询第三方库API文档**
+  - xlsx（Excel处理库）
+  - Sortablejs（拖拽排序库）
+  - dayjs（日期处理库）
+  - crypto-js（加密库）
+- **学习最佳实践和代码示例**
+  - Vue 3组件设计模式
+  - TypeScript泛型使用
+  - 性能优化技巧
+  - 安全编码实践
+
+**使用示例**：
+
+```
+查询：Element Plus ElTable如何实现虚拟滚动
+查询：Vue 3 Composition API中如何使用watch监听深层对象变化
+查询：TypeScript如何定义递归类型
+查询：Pinia如何实现跨模块状态共享
+```
+
+**注意事项**：
+
+- 优先查询官方文档，确保信息准确性
+- 关注版本兼容性（项目使用Vue 3、Element Plus最新版）
+- 结合项目现有代码风格，避免引入不一致的写法
+
+### 测试策略
+
+#### 单元测试（可选）
+
+- 使用Vitest测试框架
+- 测试工具函数和业务逻辑
+- 测试覆盖率目标：核心功能>80%
+
+#### 集成测试（必需）
+
+- 使用chrome-devtools-mcp进行端到端测试
+- 测试完整的用户交互流程
+- 验证前后端协同工作正确性
+
+#### 手动测试（必需）
+
+- 功能测试：验证所有功能点
+- UI测试：验证视觉效果和交互
+- 兼容性测试：验证多浏览器支持
+- 性能测试：验证加载速度和响应时间

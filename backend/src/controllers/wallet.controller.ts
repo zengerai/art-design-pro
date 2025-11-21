@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import pool from '../config/database'
 import { randomUUID } from 'crypto'
+import { recordOperationLog } from './operationLog.controller'
 
 /**
  * EVM钱包监控控制器
@@ -177,6 +178,19 @@ export const createWallet = async (req: Request, res: Response) => {
 
     await pool.query(sql, params)
 
+    // 记录操作日志
+    await recordOperationLog({
+      userId: (req as any).userId || 'system',
+      userName: (req as any).userName || 'System',
+      operationType: 'create',
+      category: 'wallet',
+      targetId: walletAddress,
+      afterData: { walletAddress, ownership, totalValue, mainChains, status },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      remark: '创建钱包记录'
+    })
+
     res.json({
       code: 200,
       message: '创建成功',
@@ -215,8 +229,8 @@ export const updateWallet = async (req: Request, res: Response) => {
       })
     }
 
-    // 检查钱包是否存在
-    const checkSql = 'SELECT id FROM wallet_monitoring WHERE walletAddress = ?'
+    // 检查钱包是否存在，同时获取更新前数据
+    const checkSql = 'SELECT * FROM wallet_monitoring WHERE walletAddress = ?'
     const [existing] = (await pool.query(checkSql, [walletAddress])) as any[]
 
     if (existing.length === 0) {
@@ -226,6 +240,8 @@ export const updateWallet = async (req: Request, res: Response) => {
         data: null
       })
     }
+
+    const beforeData = existing[0]
 
     // 构建更新语句
     const updateParts: string[] = []
@@ -255,6 +271,27 @@ export const updateWallet = async (req: Request, res: Response) => {
     `
 
     await pool.query(sql, params)
+
+    // 记录操作日志
+    const changedFields = Object.keys(updateFields).map((key) => ({
+      field: key,
+      oldValue: beforeData[key],
+      newValue: updateFields[key]
+    }))
+
+    await recordOperationLog({
+      userId: (req as any).userId || 'system',
+      userName: (req as any).userName || 'System',
+      operationType: 'update',
+      category: 'wallet',
+      targetId: walletAddress,
+      beforeData: { walletAddress, ...beforeData },
+      afterData: { walletAddress, ...updateFields },
+      changedFields,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      remark: '更新钱包记录'
+    })
 
     res.json({
       code: 200,
@@ -327,7 +364,20 @@ export const batchUpdateWallet = async (req: Request, res: Response) => {
       WHERE walletAddress IN (${placeholders})
     `
 
-    await query(sql, [...params, ...walletAddresses])
+    await pool.query(sql, [...params, ...walletAddresses])
+
+    // 记录操作日志
+    await recordOperationLog({
+      userId: (req as any).userId || 'system',
+      userName: (req as any).userName || 'System',
+      operationType: 'batchUpdate',
+      category: 'wallet',
+      targetId: walletAddresses.join(','),
+      afterData: { count: walletAddresses.length, updateFields },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      remark: `批量更新${walletAddresses.length}条钱包记录`
+    })
 
     res.json({
       code: 200,
@@ -420,6 +470,18 @@ export const batchCreateWallet = async (req: Request, res: Response) => {
 
     await pool.query(sql, [values])
 
+    // 记录操作日志
+    await recordOperationLog({
+      userId: (req as any).userId || 'system',
+      userName: (req as any).userName || 'System',
+      operationType: 'import',
+      category: 'wallet',
+      afterData: { count: wallets.length },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      remark: `导入${wallets.length}条钱包记录`
+    })
+
     res.json({
       code: 200,
       message: `成功导入 ${wallets.length} 条记录`,
@@ -450,6 +512,10 @@ export const deleteWallet = async (req: Request, res: Response) => {
       })
     }
 
+    // 先获取删除前数据
+    const getDataSql = 'SELECT * FROM wallet_monitoring WHERE walletAddress = ?'
+    const [beforeData] = (await pool.query(getDataSql, [walletAddress])) as any[]
+
     const sql = 'DELETE FROM wallet_monitoring WHERE walletAddress = ?'
     const [result] = (await pool.query(sql, [walletAddress])) as any
 
@@ -458,6 +524,21 @@ export const deleteWallet = async (req: Request, res: Response) => {
         code: 404,
         message: '钱包地址不存在',
         data: null
+      })
+    }
+
+    // 记录操作日志
+    if (beforeData.length > 0) {
+      await recordOperationLog({
+        userId: (req as any).userId || 'system',
+        userName: (req as any).userName || 'System',
+        operationType: 'delete',
+        category: 'wallet',
+        targetId: walletAddress,
+        beforeData: beforeData[0],
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        remark: '删除钱包记录'
       })
     }
 
@@ -471,6 +552,184 @@ export const deleteWallet = async (req: Request, res: Response) => {
     res.status(500).json({
       code: 500,
       message: error.message || '删除失败',
+      data: null
+    })
+  }
+}
+
+/**
+ * 随机抽样钱包记录
+ */
+export const randomSampleWallet = async (req: Request, res: Response) => {
+  try {
+    const { count, percentage, filterCondition = {} } = req.body
+
+    // 验证参数
+    if (!count && !percentage) {
+      return res.status(400).json({
+        code: 400,
+        message: '请指定抽样数量或抽样比例',
+        data: null
+      })
+    }
+
+    if (count && percentage) {
+      return res.status(400).json({
+        code: 400,
+        message: '抽样数量和抽样比例不能同时指定',
+        data: null
+      })
+    }
+
+    if (count && (count <= 0 || !Number.isInteger(count))) {
+      return res.status(400).json({
+        code: 400,
+        message: '抽样数量必须是正整数',
+        data: null
+      })
+    }
+
+    if (percentage && (percentage <= 0 || percentage > 100)) {
+      return res.status(400).json({
+        code: 400,
+        message: '抽样比例必须在0-100之间',
+        data: null
+      })
+    }
+
+    // 构建WHERE子句
+    const conditions: string[] = []
+    const params: any[] = []
+
+    // 处理筛选条件
+    if (filterCondition.ownership && Array.isArray(filterCondition.ownership)) {
+      filterCondition.ownership.forEach((value: string) => {
+        conditions.push('JSON_CONTAINS(ownership, ?)')
+        params.push(JSON.stringify(value))
+      })
+    }
+
+    if (filterCondition.mainChains && Array.isArray(filterCondition.mainChains)) {
+      filterCondition.mainChains.forEach((value: string) => {
+        conditions.push('JSON_CONTAINS(mainChains, ?)')
+        params.push(JSON.stringify(value))
+      })
+    }
+
+    if (filterCondition.status && Array.isArray(filterCondition.status)) {
+      filterCondition.status.forEach((value: string) => {
+        conditions.push('JSON_CONTAINS(status, ?)')
+        params.push(JSON.stringify(value))
+      })
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    // 查询总数
+    const countSql = `SELECT COUNT(*) as total FROM wallet_monitoring ${whereClause}`
+    const [countResult] = (await pool.query(countSql, params)) as any[]
+    const total = countResult[0].total
+
+    if (total === 0) {
+      return res.json({
+        code: 200,
+        message: '没有符合条件的记录',
+        data: {
+          records: [],
+          total: 0,
+          sampleSize: 0
+        }
+      })
+    }
+
+    // 计算实际抽样数量
+    let sampleSize = count || Math.ceil((total * percentage!) / 100)
+    sampleSize = Math.min(sampleSize, total) // 不能超过总数
+
+    // 使用优化的随机抽样SQL
+    // 对于大数据量，先随机ID再关联查询，避免全表ORDER BY RAND()
+    let dataSql: string
+    let dataParams: any[]
+
+    if (total > 1000) {
+      // 大数据量优化方案：先获取随机ID
+      const idSql = `
+        SELECT id FROM wallet_monitoring 
+        ${whereClause} 
+        ORDER BY RAND() 
+        LIMIT ?
+      `
+      const idParams = [...params, sampleSize]
+      const [ids] = (await pool.query(idSql, idParams)) as any[]
+      const idList = ids.map((row: any) => row.id)
+
+      if (idList.length === 0) {
+        return res.json({
+          code: 200,
+          message: '抽样完成',
+          data: {
+            records: [],
+            total,
+            sampleSize: 0
+          }
+        })
+      }
+
+      // 根据ID列表查询完整记录
+      const placeholders = idList.map(() => '?').join(',')
+      dataSql = `SELECT * FROM wallet_monitoring WHERE id IN (${placeholders})`
+      dataParams = idList
+    } else {
+      // 小数据量直接随机排序
+      dataSql = `
+        SELECT * FROM wallet_monitoring 
+        ${whereClause} 
+        ORDER BY RAND() 
+        LIMIT ?
+      `
+      dataParams = [...params, sampleSize]
+    }
+
+    const [records] = (await pool.query(dataSql, dataParams)) as any[]
+
+    // 解析JSON字段
+    const formattedRecords = records.map((record: any) => ({
+      ...record,
+      ownership:
+        typeof record.ownership === 'string'
+          ? JSON.parse(record.ownership)
+          : record.ownership || [],
+      mainChains:
+        typeof record.mainChains === 'string'
+          ? JSON.parse(record.mainChains)
+          : record.mainChains || [],
+      activityTags:
+        typeof record.activityTags === 'string'
+          ? JSON.parse(record.activityTags)
+          : record.activityTags || [],
+      categoryTags:
+        typeof record.categoryTags === 'string'
+          ? JSON.parse(record.categoryTags)
+          : record.categoryTags || [],
+      status: typeof record.status === 'string' ? JSON.parse(record.status) : record.status || [],
+      alertMark:
+        typeof record.alertMark === 'string' ? JSON.parse(record.alertMark) : record.alertMark || []
+    }))
+
+    res.json({
+      code: 200,
+      message: `成功抽样 ${formattedRecords.length} 条记录`,
+      data: {
+        records: formattedRecords,
+        total,
+        sampleSize: formattedRecords.length
+      }
+    })
+  } catch (error: any) {
+    console.error('随机抽样失败:', error)
+    res.status(500).json({
+      code: 500,
+      message: error.message || '随机抽样失败',
       data: null
     })
   }

@@ -505,4 +505,158 @@ declare namespace Api {
       }
     }
   }
+
+  /** 字段元数据管理类型 */
+  namespace FieldMetadata {
+    /** 字段类型 */
+    type FieldType = 'text' | 'number' | 'datetime' | 'multiSelect'
+
+    /** 字段元数据 */
+    interface FieldMetadata {
+      id: string
+      fieldName: string
+      fieldLabel: string
+      fieldType: FieldType
+      category: string
+      isSystem: boolean
+      sortOrder: number
+      isVisible: boolean
+      createdAt: string
+      updatedAt: string
+    }
+
+    /** 创建字段参数 */
+    interface CreateFieldParams {
+      fieldName: string
+      fieldLabel: string
+      fieldType: FieldType
+      category: string
+      isSystem?: boolean
+      sortOrder?: number
+      isVisible?: boolean
+    }
+
+    /** 更新字段参数 */
+    interface UpdateFieldParams {
+      id: string
+      updateFields: Partial<Omit<FieldMetadata, 'id' | 'createdAt' | 'updatedAt'>>
+    }
+
+    /** 调整排序参数 */
+    interface ReorderParams {
+      fieldOrders: Array<{
+        id: string
+        sortOrder: number
+      }>
+    }
+  }
+
+  /** 枚举值管理类型 */
+  namespace EnumValues {
+    /** 标签颜色类型 */
+    type TagColor = 'primary' | 'success' | 'warning' | 'danger' | 'info'
+
+    /** 枚举值 */
+    interface EnumValue {
+      id: string
+      fieldName: string
+      value: string
+      label: string
+      color?: TagColor
+      sortOrder: number
+      isActive: boolean
+      createdAt: string
+      updatedAt: string
+    }
+
+    /** 创建枚举值参数 */
+    interface CreateEnumValueParams {
+      fieldName: string
+      value: string
+      label: string
+      color?: TagColor
+      sortOrder?: number
+      isActive?: boolean
+    }
+
+    /** 批量创建枚举值参数 */
+    interface BatchCreateParams {
+      values: CreateEnumValueParams[]
+    }
+
+    /** 更新枚举值参数 */
+    interface UpdateEnumValueParams {
+      id: string
+      updateFields: Partial<Omit<EnumValue, 'id' | 'createdAt' | 'updatedAt'>>
+    }
+
+    /** 调整排序参数 */
+    interface ReorderParams {
+      valueOrders: Array<{
+        id: string
+        sortOrder: number
+      }>
+    }
+  }
+}
+
+declare namespace Api.RandomSample {
+  // 随机抽样请求参数
+  interface RandomSampleParams {
+    count?: number // 抽样数量（与percentage二选一）
+    percentage?: number // 抽样比例（0-100）
+    filterCondition?: {
+      ownership?: string[] // 归属筛选
+      mainChains?: string[] // 主链筛选
+      status?: string[] // 状态筛选
+    }
+  }
+
+  // 随机抽样响应数据
+  interface RandomSampleResponse {
+    records: Api.Wallet.WalletRecord[] // 抽样记录
+    total: number // 符合条件的总记录数
+    sampleSize: number // 实际抽样数量
+  }
+}
+
+declare namespace Api.OperationLog {
+  // 操作日志记录
+  interface OperationLogRecord {
+    id: string
+    userId: string
+    userName: string
+    operationType: string // 操作类型：create/update/delete/batchUpdate/batchDelete/import/export等
+    category: string // 分类：wallet/user/role等
+    targetId: string | null // 目标对象ID
+    beforeData: any | null // 操作前数据（JSON）
+    afterData: any | null // 操作后数据（JSON）
+    changedFields: any[] | null // 变更字段列表（JSON）
+    ipAddress: string | null // IP地址
+    userAgent: string | null // 用户代理
+    remark: string | null // 备注
+    createdAt: string // 创建时间
+  }
+
+  // 查询操作日志参数
+  interface QueryOperationLogParams {
+    current: number // 当前页码
+    size: number // 每页条数
+    userId?: string // 用户ID筛选
+    userName?: string // 用户名筛选
+    operationType?: string // 操作类型筛选
+    category?: string // 分类筛选
+    startTime?: string // 开始时间（ISO格式）
+    endTime?: string // 结束时间（ISO格式）
+  }
+
+  // 操作日志响应数据
+  interface OperationLogResponse {
+    records: OperationLogRecord[]
+    total: number
+    current: number
+    size: number
+  }
+
+  // 操作日志详情与记录结构相同,直接使用 OperationLogRecord 类型
 }

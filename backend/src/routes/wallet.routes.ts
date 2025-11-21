@@ -5,7 +5,8 @@ import {
   batchCreateWallet,
   updateWallet,
   batchUpdateWallet,
-  deleteWallet
+  deleteWallet,
+  randomSampleWallet
 } from '../controllers/wallet.controller'
 
 const router = express.Router()
@@ -27,5 +28,8 @@ router.post('/batchUpdate', batchUpdateWallet)
 
 // 删除钱包记录
 router.delete('/delete/:walletAddress', deleteWallet)
+
+// 随机抽样钱包记录
+router.post('/randomSample', randomSampleWallet)
 
 export default router

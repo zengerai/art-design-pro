@@ -75,3 +75,15 @@ export function deleteWallet(walletAddress: string) {
     showSuccessMessage: true
   })
 }
+
+/**
+ * 随机抽样钱包记录
+ * @param params 抽样参数
+ * @returns 抽样结果
+ */
+export function randomSampleWallet(params: Api.RandomSample.RandomSampleParams) {
+  return request.post<Api.RandomSample.RandomSampleResponse>({
+    url: '/api/wallet/randomSample',
+    params
+  })
+}

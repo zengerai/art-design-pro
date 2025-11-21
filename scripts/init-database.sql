@@ -202,3 +202,93 @@ INSERT INTO wallet_monitoring (id, walletAddress, ownership, lastQueryTime, tota
 --    角色：R_USER
 --    控制台：/user/dashboard/console
 -- ==========================================
+
+-- ==========================================
+-- 8. 创建字段元数据表 (field_metadata)
+-- ==========================================
+DROP TABLE IF EXISTS field_metadata;
+
+CREATE TABLE field_metadata (
+  id VARCHAR(36) PRIMARY KEY COMMENT '主键UUID',
+  fieldName VARCHAR(100) UNIQUE NOT NULL COMMENT '字段名称',
+  fieldLabel VARCHAR(100) NOT NULL COMMENT '字段显示名称',
+  fieldType VARCHAR(50) NOT NULL COMMENT '字段类型',
+  category VARCHAR(50) NOT NULL COMMENT '字段分类',
+  isSystem TINYINT(1) DEFAULT 0 COMMENT '是否系统字段',
+  sortOrder INT DEFAULT 0 COMMENT '显示排序',
+  isVisible TINYINT(1) DEFAULT 1 COMMENT '是否默认显示',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字段元数据表';
+
+-- ==========================================
+-- 9. 创建枚举值表 (enum_values)
+-- ==========================================
+DROP TABLE IF EXISTS enum_values;
+
+CREATE TABLE enum_values (
+  id VARCHAR(36) PRIMARY KEY COMMENT '主键UUID',
+  fieldName VARCHAR(100) NOT NULL COMMENT '关联字段名',
+  value VARCHAR(200) NOT NULL COMMENT '枚举值',
+  label VARCHAR(200) NOT NULL COMMENT '显示标签',
+  color VARCHAR(50) NULL COMMENT '标签颜色',
+  sortOrder INT DEFAULT 0 COMMENT '显示排序',
+  isActive TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY unique_field_value (fieldName, value),
+  INDEX idx_fieldName (fieldName)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='枚举值表';
+
+-- 插入字段元数据
+INSERT INTO field_metadata (id, fieldName, fieldLabel, fieldType, category, isSystem, sortOrder, isVisible) VALUES
+(UUID(), 'walletAddress', '钱包地址', 'text', 'wallet', 1, 1, 1),
+(UUID(), 'ownership', '归属标签', 'multiSelect', 'wallet', 1, 2, 1),
+(UUID(), 'lastQueryTime', '查询更新时间', 'datetime', 'wallet', 1, 3, 1),
+(UUID(), 'totalValue', '钱包总价值(USD)', 'number', 'wallet', 1, 4, 1),
+(UUID(), 'mainChains', '主链列表', 'multiSelect', 'wallet', 1, 5, 1),
+(UUID(), 'addressActivity', '地址活跃天数', 'number', 'wallet', 1, 6, 1),
+(UUID(), 'activityTags', '活动标签', 'multiSelect', 'wallet', 1, 7, 1),
+(UUID(), 'categoryTags', '分类标签', 'multiSelect', 'wallet', 1, 8, 1),
+(UUID(), 'status', '状态标签', 'multiSelect', 'wallet', 1, 9, 1),
+(UUID(), 'alertMark', '警报标记', 'multiSelect', 'wallet', 1, 10, 1),
+(UUID(), 'remark', '备注信息', 'text', 'wallet', 1, 11, 1);
+
+-- 插入枚举值数据
+INSERT INTO enum_values (id, fieldName, value, label, color, sortOrder, isActive) VALUES
+-- ownership 枚举值
+(UUID(), 'ownership', '个人', '个人', 'primary', 1, 1),
+(UUID(), 'ownership', '团队', '团队', 'success', 2, 1),
+(UUID(), 'ownership', '外部', '外部', 'warning', 3, 1),
+(UUID(), 'ownership', '合作方', '合作方', 'info', 4, 1),
+-- mainChains 枚举值
+(UUID(), 'mainChains', 'ETH', 'ETH', 'primary', 1, 1),
+(UUID(), 'mainChains', 'ARB', 'ARB', 'success', 2, 1),
+(UUID(), 'mainChains', 'OP', 'OP', 'warning', 3, 1),
+(UUID(), 'mainChains', 'BASE', 'BASE', 'danger', 4, 1),
+(UUID(), 'mainChains', 'ZKSYNC', 'ZKSYNC', 'info', 5, 1),
+(UUID(), 'mainChains', 'POLYGON', 'POLYGON', 'primary', 6, 1),
+(UUID(), 'mainChains', 'BSC', 'BSC', 'success', 7, 1),
+(UUID(), 'mainChains', 'AVAX', 'AVAX', 'warning', 8, 1),
+-- activityTags 枚举值
+(UUID(), 'activityTags', '活跃', '活跃', 'success', 1, 1),
+(UUID(), 'activityTags', '休眠', '休眠', 'info', 2, 1),
+(UUID(), 'activityTags', '新增', '新增', 'primary', 3, 1),
+(UUID(), 'activityTags', '高频', '高频', 'warning', 4, 1),
+-- categoryTags 枚举值
+(UUID(), 'categoryTags', '交易', '交易', 'primary', 1, 1),
+(UUID(), 'categoryTags', 'DeFi', 'DeFi', 'success', 2, 1),
+(UUID(), 'categoryTags', 'NFT', 'NFT', 'warning', 3, 1),
+(UUID(), 'categoryTags', 'GameFi', 'GameFi', 'danger', 4, 1),
+(UUID(), 'categoryTags', 'DAO', 'DAO', 'info', 5, 1),
+-- status 枚举值
+(UUID(), 'status', '正常', '正常', 'success', 1, 1),
+(UUID(), 'status', '监控中', '监控中', 'warning', 2, 1),
+(UUID(), 'status', '已归档', '已归档', 'info', 3, 1),
+(UUID(), 'status', '待处理', '待处理', 'primary', 4, 1),
+-- alertMark 枚举值
+(UUID(), 'alertMark', '高风险', '高风险', 'danger', 1, 1),
+(UUID(), 'alertMark', '异常交易', '异常交易', 'warning', 2, 1),
+(UUID(), 'alertMark', '大额转账', '大额转账', 'warning', 3, 1),
+(UUID(), 'alertMark', '需关注', '需关注', 'primary', 4, 1);
