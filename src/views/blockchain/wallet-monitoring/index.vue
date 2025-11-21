@@ -45,6 +45,19 @@
         </template>
       </ArtTableHeader>
 
+      <!-- 视图Tabs -->
+      <ViewTabs
+        v-model:activeViewId="activeViewId"
+        :views="views"
+        @view-change="handleViewChange"
+        @add-view="handleAddView"
+        @edit-view="handleEditView"
+        @delete-view="handleDeleteView"
+        @duplicate-view="handleDuplicateView"
+        @set-default="handleSetDefaultView"
+        @export-view="handleExportView"
+      />
+
       <!-- 表格 -->
       <ArtTable
         ref="tableRef"
@@ -604,11 +617,21 @@
         </ElButton>
       </template>
     </ElDialog>
+
+    <!-- 视图配置对话框 -->
+    <ViewDialog
+      v-model:visible="viewDialogVisible"
+      :edit-view="editingView"
+      :ownership-options="ownershipOptions"
+      :chain-options="chainOptions"
+      :status-options="statusOptions"
+      @submit="handleViewFormSubmit"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, h } from 'vue'
+  import { ref, reactive, h, onMounted } from 'vue'
   import * as XLSX from 'xlsx'
   import FileSaver from 'file-saver'
   import {
@@ -631,7 +654,10 @@
   import ArtExcelImportPreview from '@/components/core/forms/art-excel-import-preview/index.vue'
   import ArtExcelExport from '@/components/core/forms/art-excel-export/index.vue'
   import EditableCell from '@/components/editable-cell/EditableCell.vue'
+  import ViewTabs from './components/ViewTabs.vue'
+  import ViewDialog from './components/ViewDialog.vue'
   import { useTable } from '@/hooks/core/useTable'
+  import { useViewManagement } from '@/hooks/core/useViewManagement'
   import {
     fetchWalletList,
     createWallet,
@@ -642,6 +668,7 @@
     randomSampleWallet
   } from '@/api/wallet'
   import dayjs from 'dayjs'
+  import type { ViewFormData, HorizontalViewConfig } from '@/types/view'
 
   defineOptions({ name: 'WalletMonitoring' })
 
@@ -728,19 +755,19 @@
   }
 
   // 导出列配置
-  const exportColumns = [
-    { prop: 'walletAddress', label: '钱包地址' },
-    { prop: 'ownership', label: '归属标签' },
-    { prop: 'lastQueryTime', label: '查询更新时间' },
-    { prop: 'totalValue', label: '钱包总价值(USD)' },
-    { prop: 'mainChains', label: '主链列表' },
-    { prop: 'addressActivity', label: '地址活跃天数' },
-    { prop: 'activityTags', label: '活动标签' },
-    { prop: 'categoryTags', label: '分类标签' },
-    { prop: 'status', label: '状态标签' },
-    { prop: 'alertMark', label: '警报标记' },
-    { prop: 'remark', label: '备注信息' }
-  ]
+  const exportColumns: Record<string, { title: string }> = {
+    walletAddress: { title: '钱包地址' },
+    ownership: { title: '归属标签' },
+    lastQueryTime: { title: '查询更新时间' },
+    totalValue: { title: '钱包总价值(USD)' },
+    mainChains: { title: '主链列表' },
+    addressActivity: { title: '地址活跃天数' },
+    activityTags: { title: '活动标签' },
+    categoryTags: { title: '分类标签' },
+    status: { title: '状态标签' },
+    alertMark: { title: '警报标记' },
+    remark: { title: '备注信息' }
+  }
 
   // 使用 useTable hook
   const {
@@ -749,16 +776,13 @@
     data,
     loading,
     pagination,
+    searchParams,
     refreshData,
     handleSizeChange,
     handleCurrentChange
   } = useTable({
     core: {
       apiFn: fetchWalletList,
-      apiParams: {
-        current: 1,
-        size: 20
-      },
       // 自定义分页字段映射，将current/size映射为offset/limit
       paginationKey: {
         current: 'offset',
@@ -845,6 +869,134 @@
     }
   })
 
+  // 视图管理
+  const { views, activeViewId, createView, updateView, deleteView, duplicateView, switchView } =
+    useViewManagement()
+
+  // 视图对话框
+  const viewDialogVisible = ref(false)
+  const editingView = ref<HorizontalViewConfig | null>(null)
+
+  // 视图切换事件
+  const handleViewChange = async (viewId: string) => {
+    const view = views.value.find((v) => v.id === viewId)
+    if (!view) return
+
+    // 获取筛选条件
+    const filter = view.filterCondition
+
+    // 清除之前的筛选条件（保留offset和limit）
+    const searchParamsObj = searchParams as Record<string, any>
+    const paginationKeys = ['offset', 'limit', 'current', 'size']
+    Object.keys(searchParamsObj).forEach((key) => {
+      if (!paginationKeys.includes(key)) {
+        delete searchParamsObj[key]
+      }
+    })
+
+    // 应用新的筛选条件（仅应用非空值）
+    Object.entries(filter).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        // 处理数组类型
+        if (Array.isArray(value) && value.length > 0) {
+          searchParamsObj[key] = value
+        }
+        // 处理数值类型
+        else if (typeof value === 'number') {
+          searchParamsObj[key] = value
+        }
+        // 处理其他非空值
+        else if (value) {
+          searchParamsObj[key] = value
+        }
+      }
+    })
+
+    // 重置分页
+    pagination.current = 1
+
+    // 刷新数据
+    await refreshData()
+
+    // 切换视图
+    switchView(viewId)
+  }
+
+  // 新增视图
+  const handleAddView = () => {
+    editingView.value = null
+    viewDialogVisible.value = true
+  }
+
+  // 编辑视图
+  const handleEditView = (view: HorizontalViewConfig) => {
+    editingView.value = view
+    viewDialogVisible.value = true
+  }
+
+  // 删除视图
+  const handleDeleteView = (viewId: string) => {
+    deleteView(viewId)
+  }
+
+  // 复制视图
+  const handleDuplicateView = (viewId: string) => {
+    duplicateView(viewId)
+  }
+
+  // 设为默认视图
+  const handleSetDefaultView = (viewId: string) => {
+    const view = views.value.find((v) => v.id === viewId)
+    if (!view) return
+
+    const formData: ViewFormData = {
+      name: view.name,
+      filterCondition: view.filterCondition,
+      sortRules: view.sortRules,
+      visibleFields: view.visibleFields,
+      isDefault: true
+    }
+
+    updateView(viewId, formData)
+  }
+
+  // 导出视图
+  const handleExportView = (view: HorizontalViewConfig) => {
+    try {
+      const dataStr = JSON.stringify([view], null, 2)
+      const blob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `view_${view.name}_${new Date().toISOString().split('T')[0]}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+
+      ElMessage.success('视图导出成功')
+    } catch (error) {
+      console.error('导出视图失败:', error)
+      ElMessage.error('导出视图失败')
+    }
+  }
+
+  // 视图表单提交
+  const handleViewFormSubmit = async (formData: ViewFormData) => {
+    if (editingView.value) {
+      // 记录是否编辑的是当前激活的视图
+      const isEditingActiveView = editingView.value.id === activeViewId.value
+
+      updateView(editingView.value.id, formData)
+
+      // 如果编辑的是当前激活视图，立即应用新的筛选条件
+      if (isEditingActiveView) {
+        await handleViewChange(editingView.value.id)
+      }
+    } else {
+      createView(formData)
+    }
+    viewDialogVisible.value = false
+  }
+
   // 添加
   const handleAdd = () => {
     editData.value = null
@@ -891,7 +1043,7 @@
       })
       await deleteWallet(row.walletAddress)
       ElMessage.success('删除成功')
-      refreshData()
+      await refreshData()
     } catch (error) {
       if (error !== 'cancel') {
         console.error('删除失败:', error)
@@ -928,7 +1080,7 @@
       }
 
       dialogVisible.value = false
-      refreshData()
+      await refreshData()
     } catch (error) {
       console.error('操作失败:', error)
     } finally {
@@ -952,7 +1104,7 @@
       // 数据已经由导入组件转换好，直接调用批量创建接口
       await batchCreateWallet(data)
       ElMessage.success(`成功导入 ${data.length} 条数据`)
-      refreshData()
+      await refreshData()
     } catch (error: any) {
       console.error('导入失败:', error)
       ElMessage.error(`错误信息：${error.response?.data?.message || error.message || '导入失败'}`)
@@ -1051,7 +1203,7 @@
 
       ElMessage.success(`成功删除 ${selectedRows.value.length} 个钱包`)
       clearSelection()
-      refreshData()
+      await refreshData()
     } catch (error) {
       if (error !== 'cancel') {
         console.error('批量删除失败:', error)
@@ -1060,8 +1212,14 @@
     }
   }
 
-  // 提交批量编辑
+  // 提交批量编辑 [FIXED: 2025-11-21 15:25]
   const handleBatchSubmit = async () => {
+    // 防止重复提交：如果正在提交中，直接返回
+    if (batchSubmitLoading.value) {
+      console.warn('批量更新正在进行中，忽略重复调用')
+      return
+    }
+
     if (!batchFormRef.value) return
     if (batchForm.fields.length === 0) {
       ElMessage.warning('请至少选择一个要编辑的字段')
@@ -1070,27 +1228,65 @@
 
     try {
       batchSubmitLoading.value = true
+      console.log('[批量更新] 开始执行，当前表单数据:', JSON.stringify(batchForm, null, 2))
 
       // 构造批量更新参数
       const updateFields: any = {}
+      const multiSelectFields = [
+        'ownership',
+        'mainChains',
+        'activityTags',
+        'categoryTags',
+        'status',
+        'alertMark'
+      ]
+
       batchForm.fields.forEach((field) => {
-        updateFields[field] = batchForm[field as keyof typeof batchForm]
+        const value = batchForm[field as keyof typeof batchForm]
+
+        // 对于多选字段，需要包装成 { operation, value } 格式
+        if (multiSelectFields.includes(field)) {
+          updateFields[field] = {
+            operation: batchMode.value, // 'replace' 或 'append'
+            value: value
+          }
+        } else {
+          updateFields[field] = value
+        }
       })
 
       const walletAddresses = selectedRows.value.map((row) => row.walletAddress)
 
+      console.log(
+        '[批量更新] 请求参数:',
+        JSON.stringify({ walletAddresses, updateFields }, null, 2)
+      )
+
+      // 执行批量更新
       await batchUpdateWallet({
         walletAddresses,
-        updateFields,
-        mode: batchMode.value
+        updateFields
       })
 
-      ElMessage.success(`成功批量更新 ${walletAddresses.length} 个钱包`)
+      console.log('[批量更新] 成功完成')
+
+      // 成功后关闭对话框
       batchDialogVisible.value = false
-      clearSelection()
-      refreshData()
+
+      // 刷新数据
+      await refreshData()
+
+      // 清空选择（使用try-catch避免异常影响用户体验）
+      try {
+        clearSelection()
+      } catch (clearError) {
+        console.warn('[批量更新] 清空选择时发生异常（已忽略）:', clearError)
+      }
+
+      // 最后显示成功消息
+      ElMessage.success(`成功批量更新 ${walletAddresses.length} 个钱包`)
     } catch (error) {
-      console.error('批量更新失败:', error)
+      console.error('[批量更新] 操作失败:', error)
       ElMessage.error('批量更新失败')
     } finally {
       batchSubmitLoading.value = false
@@ -1221,6 +1417,13 @@
       ElMessage.error('导出失败')
     }
   }
+
+  // 页面初始化：应用当前激活视图的筛选条件
+  onMounted(() => {
+    if (activeViewId.value) {
+      handleViewChange(activeViewId.value)
+    }
+  })
 </script>
 
 <style scoped lang="scss">

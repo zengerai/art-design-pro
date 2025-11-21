@@ -12,32 +12,57 @@ import { recordOperationLog } from './operationLog.controller'
  */
 export const getWalletList = async (req: Request, res: Response) => {
   try {
-    const { offset = 0, limit = 50, filterCondition = {}, sortRules = [] } = req.body
+    const { offset = 0, limit = 50, filterCondition = {}, sortRules = [], ...restParams } = req.body
+
+    // 兼容两种参数格式：扁平结构和嵌套结构
+    // 如果filterCondition为空对象，则从restParams中提取筛选条件
+    const filter = Object.keys(filterCondition).length > 0 ? filterCondition : restParams
 
     // 构建WHERE子句
     const conditions: string[] = []
     const params: any[] = []
 
     // 处理筛选条件
-    if (filterCondition.ownership && Array.isArray(filterCondition.ownership)) {
-      filterCondition.ownership.forEach((value: string) => {
+    if (filter.ownership && Array.isArray(filter.ownership)) {
+      filter.ownership.forEach((value: string) => {
         conditions.push('JSON_CONTAINS(ownership, ?)')
         params.push(JSON.stringify(value))
       })
     }
 
-    if (filterCondition.mainChains && Array.isArray(filterCondition.mainChains)) {
-      filterCondition.mainChains.forEach((value: string) => {
+    if (filter.mainChains && Array.isArray(filter.mainChains)) {
+      filter.mainChains.forEach((value: string) => {
         conditions.push('JSON_CONTAINS(mainChains, ?)')
         params.push(JSON.stringify(value))
       })
     }
 
-    if (filterCondition.status && Array.isArray(filterCondition.status)) {
-      filterCondition.status.forEach((value: string) => {
+    if (filter.status && Array.isArray(filter.status)) {
+      filter.status.forEach((value: string) => {
         conditions.push('JSON_CONTAINS(status, ?)')
         params.push(JSON.stringify(value))
       })
+    }
+
+    // 处理数值范围筛选
+    if (filter.totalValueMin !== undefined && filter.totalValueMin !== null) {
+      conditions.push('totalValue >= ?')
+      params.push(filter.totalValueMin)
+    }
+
+    if (filter.totalValueMax !== undefined && filter.totalValueMax !== null) {
+      conditions.push('totalValue <= ?')
+      params.push(filter.totalValueMax)
+    }
+
+    if (filter.addressActivityMin !== undefined && filter.addressActivityMin !== null) {
+      conditions.push('addressActivity >= ?')
+      params.push(filter.addressActivityMin)
+    }
+
+    if (filter.addressActivityMax !== undefined && filter.addressActivityMax !== null) {
+      conditions.push('addressActivity <= ?')
+      params.push(filter.addressActivityMax)
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
