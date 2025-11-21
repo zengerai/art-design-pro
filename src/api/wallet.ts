@@ -57,10 +57,11 @@ export function updateWallet(params: Api.Wallet.UpdateWalletParams) {
  * @returns 批量更新结果
  */
 export function batchUpdateWallet(params: Api.Wallet.BatchUpdateParams) {
-  return request.post<{ successCount: number; failedCount: number }>({
+  return request.post<{ count: number }>({
     url: '/api/wallet/batchUpdate',
     params,
-    showSuccessMessage: true
+    showErrorMessage: true // 确保显示错误消息
+    // 不自动显示成功消息，由前端手动控制
   })
 }
 

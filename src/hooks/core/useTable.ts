@@ -649,7 +649,7 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
 
     // 分页相关
     /** 分页状态信息 */
-    pagination: readonly(pagination),
+    pagination,
     /** 移动端分页配置 */
     paginationMobile: mobilePagination,
     /** 页面大小变化处理 */
