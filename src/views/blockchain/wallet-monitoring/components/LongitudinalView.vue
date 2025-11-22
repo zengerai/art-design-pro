@@ -86,6 +86,14 @@
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
+  import {
+    ElIcon,
+    ElSelect,
+    ElOption,
+    ElScrollbar,
+    ElBadge,
+    ElCollapseTransition
+  } from 'element-plus'
   import { Grid, Fold, Expand, ArrowDown, ArrowRight } from '@element-plus/icons-vue'
   import type { ViewStats } from '@/types/view'
   import type { GroupFieldConfig } from '@/hooks/core/useLongitudinalView'

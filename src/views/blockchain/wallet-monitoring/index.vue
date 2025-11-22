@@ -691,7 +691,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, h, onMounted, nextTick } from 'vue'
+  import { ref, reactive, h, onMounted, nextTick, watch } from 'vue'
   import * as XLSX from 'xlsx'
   import FileSaver from 'file-saver'
   import {
@@ -704,6 +704,16 @@
     ElRadio,
     ElDivider,
     ElAlert,
+    ElCard,
+    ElSpace,
+    ElButton,
+    ElDialog,
+    ElForm,
+    ElFormItem,
+    ElInput,
+    ElSelect,
+    ElOption,
+    ElInputNumber,
     FormRules,
     FormInstance
   } from 'element-plus'
@@ -732,7 +742,7 @@
     randomSampleWallet
   } from '@/api/wallet'
   import dayjs from 'dayjs'
-  import type { ViewFormData, HorizontalViewConfig } from '@/types/view'
+  import type { ViewFormData, HorizontalViewConfig, ViewFilter } from '@/types/view'
 
   defineOptions({ name: 'WalletMonitoring' })
 
@@ -862,7 +872,7 @@
       apiFn: fetchWalletList,
       columnsFactory: () => [
         { type: 'selection', width: 55, fixed: 'left' },
-        { type: 'index', width: 60, label: '序号' },
+        { type: 'index', width: 60, label: '序号', fixed: 'left' },
         { prop: 'walletAddress', label: '钱包地址', minWidth: 180, fixed: 'left' },
         {
           prop: 'ownership',
@@ -955,18 +965,6 @@
     }
   }
 
-  // 视图管理
-  const {
-    views,
-    activeViewId,
-    createView,
-    updateView,
-    deleteView,
-    duplicateView,
-    switchView,
-    activeView
-  } = useViewManagement()
-
   // 分组字段配置
   const groupFieldsConfig: GroupFieldConfig[] = [
     { key: 'ownership', label: '归属标签', options: ownershipOptions.value },
@@ -977,8 +975,8 @@
     { key: 'alertMark', label: '警报标记', options: alertMarkOptions.value }
   ]
 
-  // 横向视图筛选条件
-  const horizontalFilter = computed(() => activeView.value?.filterCondition || {})
+  // 横向筛选条件（初始值，稍后会被 useViewManagement 填充）
+  const horizontalFilterRef = ref<ViewFilter>({})
 
   // 纵向视图管理（使用全量数据进行统计）
   const {
@@ -988,6 +986,7 @@
     viewStats: longitudinalStats,
     collapsed: longitudinalCollapsed,
     expandedGroups: longitudinalExpandedGroups,
+    activeView: activeLongitudinalView,
     setGroupField: setLongitudinalGroupField,
     switchView: switchLongitudinalView,
     getCombinedFilter,
@@ -996,8 +995,43 @@
   } = useLongitudinalView({
     data: allData,
     groupFields: groupFieldsConfig,
-    horizontalFilter
+    horizontalFilter: horizontalFilterRef
   })
+
+  // 根据当前纵向视图生成命名空间，确保每个纵向视图有独立的横向视图
+  const currentNamespace = computed(() => {
+    const view = activeLongitudinalView.value
+    if (!view) return 'all'
+
+    // 全量视图使用 'all' 命名空间
+    if (view.isAllView) {
+      return 'all'
+    }
+
+    // 其他视图使用 "{groupField}_{groupValue}" 命名空间
+    return `${view.groupField}_${view.groupValue}`
+  })
+
+  // 横向视图管理（根据纵向视图使用不同的命名空间）
+  const {
+    views,
+    activeViewId,
+    createView,
+    updateView,
+    deleteView,
+    duplicateView,
+    switchView,
+    activeView
+  } = useViewManagement({ namespace: currentNamespace })
+
+  // 同步横向筛选条件到纵向视图
+  watch(
+    () => activeView.value?.filterCondition,
+    (newFilter) => {
+      horizontalFilterRef.value = newFilter || {}
+    },
+    { immediate: true }
+  )
 
   // 视图对话框
   const viewDialogVisible = ref(false)

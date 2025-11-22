@@ -1,14 +1,15 @@
 /**
  * 视图管理 Composable
  * 负责视图的 CRUD 操作、LocalStorage 持久化、视图切换等功能
+ * 支持命名空间隔离，不同纵向视图的横向视图标签相互独立
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { HorizontalViewConfig, ViewStorage, ViewFormData, ViewFilter } from '@/types/view'
 
-/** LocalStorage 键名 */
-const STORAGE_KEY = 'wallet_monitoring_views_config'
+/** LocalStorage 基础键名 */
+const STORAGE_KEY_PREFIX = 'wallet_monitoring_views'
 const STORAGE_VERSION = '1.0.0'
 
 /** 默认视图配置 */
@@ -49,9 +50,32 @@ const checkStorageAvailable = (): boolean => {
 }
 
 /**
- * 视图管理 Hook
+ * 视图管理 Hook 参数
  */
-export function useViewManagement() {
+export interface UseViewManagementOptions {
+  /** 命名空间，用于隔离不同纵向视图的横向视图数据，支持响应式 */
+  namespace?: Ref<string> | string
+}
+
+/**
+ * 视图管理 Hook
+ * @param options - 配置选项
+ * @param options.namespace - 命名空间，默认为 'default'，不同命名空间的视图数据相互独立
+ */
+export function useViewManagement(options: UseViewManagementOptions = {}) {
+  // 支持传入 ref 或普通字符串
+  const namespaceInput = options.namespace || 'default'
+  const namespace = ref(typeof namespaceInput === 'string' ? namespaceInput : namespaceInput.value)
+
+  // 如果传入的是 ref，监听其变化
+  if (typeof namespaceInput !== 'string') {
+    watch(namespaceInput, (newVal) => {
+      namespace.value = newVal
+    })
+  }
+
+  // 根据命名空间生成唯一的存储键名（响应式）
+  const STORAGE_KEY = computed(() => `${STORAGE_KEY_PREFIX}_${namespace.value}`)
   // 视图列表
   const views = ref<HorizontalViewConfig[]>([])
 
@@ -78,7 +102,7 @@ export function useViewManagement() {
         return
       }
 
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = localStorage.getItem(STORAGE_KEY.value)
 
       if (!stored) {
         // 首次加载，创建默认视图
@@ -148,7 +172,7 @@ export function useViewManagement() {
         }
       }
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      localStorage.setItem(STORAGE_KEY.value, JSON.stringify(data))
     } catch (error) {
       console.error('保存视图配置失败:', error)
       if (error instanceof Error && error.name === 'QuotaExceededError') {
@@ -484,6 +508,12 @@ export function useViewManagement() {
   // 监听激活视图变化，保存到 LocalStorage
   watch(activeViewId, () => {
     saveViews()
+  })
+
+  // 监听 namespace 变化，重新加载视图
+  watch(namespace, () => {
+    console.log(`纵向视图切换，加载命名空间: ${namespace.value}`)
+    loadViews()
   })
 
   // 初始化加载
