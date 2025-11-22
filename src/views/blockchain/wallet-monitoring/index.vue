@@ -81,6 +81,9 @@
         <ViewTabs
           v-model:activeViewId="activeViewId"
           :views="views"
+          :enable-server-sync="true"
+          :is-syncing="isSyncing"
+          :last-sync-time="lastSyncTime"
           @view-change="handleViewChange"
           @add-view="handleAddView"
           @edit-view="handleEditView"
@@ -88,6 +91,7 @@
           @duplicate-view="handleDuplicateView"
           @set-default="handleSetDefaultView"
           @export-view="handleExportView"
+          @manual-sync="handleManualSync"
         />
 
         <!-- 表格 -->
@@ -1012,7 +1016,7 @@
     return `${view.groupField}_${view.groupValue}`
   })
 
-  // 横向视图管理（根据纵向视图使用不同的命名空间）
+  // 横向视图管理（根据纵向视图使用不同的命名空间，启用服务器同步）
   const {
     views,
     activeViewId,
@@ -1021,8 +1025,16 @@
     deleteView,
     duplicateView,
     switchView,
-    activeView
-  } = useViewManagement({ namespace: currentNamespace })
+    activeView,
+    // 同步状态
+    isSyncing,
+    lastSyncTime,
+    manualSyncToServer
+  } = useViewManagement({
+    namespace: currentNamespace,
+    enableServerSync: true, // 启用服务器同步
+    syncMode: 'auto' // 自动同步模式
+  })
 
   // 同步横向筛选条件到纵向视图
   watch(
@@ -1155,6 +1167,11 @@
       createView(formData)
     }
     viewDialogVisible.value = false
+  }
+
+  // 手动同步视图配置到服务器
+  const handleManualSync = async () => {
+    await manualSyncToServer()
   }
 
   // 纵向视图事件处理

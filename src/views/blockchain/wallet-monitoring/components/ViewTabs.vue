@@ -1,35 +1,66 @@
 <template>
   <div class="view-tabs-container">
-    <ElTabs
-      :model-value="activeViewId"
-      type="card"
-      closable
-      addable
-      @update:model-value="handleTabChange"
-      @tab-remove="handleTabRemove"
-      @tab-add="handleAddView"
-      @contextmenu.prevent="handleContextMenu"
-    >
-      <ElTabPane
-        v-for="view in views"
-        :key="view.id"
-        :label="view.name"
-        :name="view.id"
-        :closable="views.length > 1"
+    <div class="view-tabs-header">
+      <ElTabs
+        :model-value="activeViewId"
+        type="card"
+        closable
+        addable
+        @update:model-value="handleTabChange"
+        @tab-remove="handleTabRemove"
+        @tab-add="handleAddView"
+        @contextmenu.prevent="handleContextMenu"
       >
-        <template #label>
-          <span
-            class="tab-label"
-            :class="{ 'is-default': view.isDefault, 'is-temporary': view.isTemporary }"
-            @contextmenu.prevent.stop="showContextMenu($event, view)"
-          >
-            {{ view.name }}
-            <ElIcon v-if="view.isDefault" class="default-icon"><Star /></ElIcon>
-            <ElIcon v-if="view.isTemporary" class="temporary-icon"><Timer /></ElIcon>
-          </span>
-        </template>
-      </ElTabPane>
-    </ElTabs>
+        <ElTabPane
+          v-for="view in views"
+          :key="view.id"
+          :label="view.name"
+          :name="view.id"
+          :closable="views.length > 1"
+        >
+          <template #label>
+            <span
+              class="tab-label"
+              :class="{ 'is-default': view.isDefault, 'is-temporary': view.isTemporary }"
+              @contextmenu.prevent.stop="showContextMenu($event, view)"
+            >
+              {{ view.name }}
+              <ElIcon v-if="view.isDefault" class="default-icon"><Star /></ElIcon>
+              <ElIcon v-if="view.isTemporary" class="temporary-icon"><Timer /></ElIcon>
+            </span>
+          </template>
+        </ElTabPane>
+      </ElTabs>
+
+      <!-- 同步状态显示 -->
+      <div v-if="enableServerSync" class="sync-status">
+        <ElTooltip
+          :content="
+            isSyncing
+              ? '同步中...'
+              : lastSyncTime
+                ? `上次同步: ${formatSyncTime(lastSyncTime)}`
+                : '未同步'
+          "
+        >
+          <ElIcon :class="['sync-icon', { 'is-syncing': isSyncing }]">
+            <Loading v-if="isSyncing" />
+            <Finished v-else-if="lastSyncTime" />
+            <Warning v-else />
+          </ElIcon>
+        </ElTooltip>
+        <ElButton
+          v-if="!isSyncing"
+          link
+          type="primary"
+          size="small"
+          :icon="Refresh"
+          @click="handleManualSync"
+        >
+          手动同步
+        </ElButton>
+      </div>
+    </div>
 
     <!-- 右键菜单 -->
     <ElDropdown
@@ -60,12 +91,35 @@
 <script setup lang="ts">
   import { ref } from 'vue'
   import { ElMessageBox, ElMessage } from 'element-plus'
-  import { Edit, Delete, DocumentCopy, Star, Timer, Download } from '@element-plus/icons-vue'
+  import {
+    Edit,
+    Delete,
+    DocumentCopy,
+    Star,
+    Timer,
+    Download,
+    Loading,
+    Finished,
+    Warning,
+    Refresh
+  } from '@element-plus/icons-vue'
   import type { HorizontalViewConfig } from '@/types/view'
+  import dayjs from 'dayjs'
+  import relativeTime from 'dayjs/plugin/relativeTime'
+  import 'dayjs/locale/zh-cn'
+
+  dayjs.extend(relativeTime)
+  dayjs.locale('zh-cn')
 
   interface Props {
     views: HorizontalViewConfig[]
     activeViewId: string
+    /** 是否启用服务器同步 */
+    enableServerSync?: boolean
+    /** 是否正在同步 */
+    isSyncing?: boolean
+    /** 最后同步时间 */
+    lastSyncTime?: string
   }
 
   interface Emits {
@@ -77,6 +131,7 @@
     (e: 'duplicate-view', viewId: string): void
     (e: 'set-default', viewId: string): void
     (e: 'export-view', view: HorizontalViewConfig): void
+    (e: 'manual-sync'): void
   }
 
   const props = defineProps<Props>()
@@ -197,12 +252,65 @@
   const handleContextMenu = (event: MouseEvent) => {
     event.preventDefault()
   }
+
+  /**
+   * 格式化同步时间
+   */
+  const formatSyncTime = (time: string) => {
+    return dayjs(time).fromNow()
+  }
+
+  /**
+   * 手动同步
+   */
+  const handleManualSync = () => {
+    emit('manual-sync')
+  }
 </script>
 
 <style scoped lang="scss">
   .view-tabs-container {
     margin-top: 16px;
     margin-bottom: 16px;
+
+    .view-tabs-header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+
+      :deep(.el-tabs) {
+        flex: 1;
+      }
+
+      .sync-status {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 0 12px;
+        font-size: 14px;
+        color: var(--el-text-color-secondary);
+
+        .sync-icon {
+          font-size: 16px;
+          transition: all 0.3s ease;
+
+          &.is-syncing {
+            color: var(--el-color-primary);
+            animation: rotate 1s linear infinite;
+          }
+        }
+
+        @keyframes rotate {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    }
 
     :deep(.el-tabs__header) {
       margin-bottom: 0;

@@ -7,6 +7,7 @@
 import { ref, computed, watch, type Ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { HorizontalViewConfig, ViewStorage, ViewFormData, ViewFilter } from '@/types/view'
+import { saveViewConfig, loadViewConfig } from '@/api/view'
 
 /** LocalStorage 基础键名 */
 const STORAGE_KEY_PREFIX = 'wallet_monitoring_views'
@@ -55,12 +56,18 @@ const checkStorageAvailable = (): boolean => {
 export interface UseViewManagementOptions {
   /** 命名空间，用于隔离不同纵向视图的横向视图数据，支持响应式 */
   namespace?: Ref<string> | string
+  /** 是否启用服务器同步 */
+  enableServerSync?: boolean
+  /** 同步模式：'auto' 自动同步 | 'manual' 手动同步 */
+  syncMode?: 'auto' | 'manual'
 }
 
 /**
  * 视图管理 Hook
  * @param options - 配置选项
  * @param options.namespace - 命名空间，默认为 'default'，不同命名空间的视图数据相互独立
+ * @param options.enableServerSync - 是否启用服务器同步，默认为 false
+ * @param options.syncMode - 同步模式，默认为 'auto'
  */
 export function useViewManagement(options: UseViewManagementOptions = {}) {
   // 支持传入 ref 或普通字符串
@@ -73,6 +80,12 @@ export function useViewManagement(options: UseViewManagementOptions = {}) {
       namespace.value = newVal
     })
   }
+
+  // 服务器同步配置
+  const enableServerSync = ref(options.enableServerSync ?? false)
+  const syncMode = ref(options.syncMode ?? 'auto')
+  const isSyncing = ref(false)
+  const lastSyncTime = ref<string>('')
 
   // 根据命名空间生成唯一的存储键名（响应式）
   const STORAGE_KEY = computed(() => `${STORAGE_KEY_PREFIX}_${namespace.value}`)
@@ -93,8 +106,34 @@ export function useViewManagement(options: UseViewManagementOptions = {}) {
   /**
    * 从 LocalStorage 加载视图配置
    */
-  const loadViews = (): void => {
+  const loadViews = async (): Promise<void> => {
     try {
+      // 如果启用服务器同步，优先从服务器加载
+      if (enableServerSync.value) {
+        try {
+          isSyncing.value = true
+          const serverData = await loadViewConfig(namespace.value)
+
+          if (serverData && serverData.horizontal) {
+            // 使用服务器数据
+            views.value = serverData.horizontal || []
+            activeViewId.value = serverData.activeView?.horizontalId || views.value[0]?.id
+
+            // 同步到 LocalStorage 作为缓存
+            localStorage.setItem(STORAGE_KEY.value, JSON.stringify(serverData))
+            lastSyncTime.value = new Date().toISOString()
+
+            console.log(`从服务器加载视图配置成功: ${namespace.value}`)
+            isSyncing.value = false
+            return
+          }
+        } catch (error) {
+          console.warn('从服务器加载失败，使用本地数据:', error)
+          isSyncing.value = false
+        }
+      }
+
+      // 降级到 LocalStorage
       if (!checkStorageAvailable()) {
         ElMessage.warning('浏览器存储不可用，视图配置将无法保存')
         views.value = [createDefaultView()]
@@ -158,7 +197,7 @@ export function useViewManagement(options: UseViewManagementOptions = {}) {
   /**
    * 保存视图配置到 LocalStorage
    */
-  const saveViews = (): void => {
+  const saveViews = async (): Promise<void> => {
     try {
       if (!checkStorageAvailable()) {
         return
@@ -172,7 +211,17 @@ export function useViewManagement(options: UseViewManagementOptions = {}) {
         }
       }
 
+      // 先保存到 LocalStorage（快速响应）
       localStorage.setItem(STORAGE_KEY.value, JSON.stringify(data))
+
+      // 如果启用服务器同步且为自动模式，异步上传
+      if (enableServerSync.value && syncMode.value === 'auto') {
+        // 不阻塞用户操作，异步同步
+        syncToServer(data).catch((error) => {
+          console.error('同步到服务器失败:', error)
+          // 静默失败，不弹出错误提示
+        })
+      }
     } catch (error) {
       console.error('保存视图配置失败:', error)
       if (error instanceof Error && error.name === 'QuotaExceededError') {
@@ -180,6 +229,51 @@ export function useViewManagement(options: UseViewManagementOptions = {}) {
       } else {
         ElMessage.error('保存视图配置失败')
       }
+    }
+  }
+
+  /**
+   * 同步视图配置到服务器
+   */
+  const syncToServer = async (data: ViewStorage): Promise<void> => {
+    isSyncing.value = true
+    try {
+      await saveViewConfig({
+        namespace: namespace.value,
+        viewData: data
+      })
+      lastSyncTime.value = new Date().toISOString()
+      console.log(`同步到服务器成功: ${namespace.value}`)
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  /**
+   * 手动同步到服务器
+   */
+  const manualSyncToServer = async (): Promise<boolean> => {
+    try {
+      if (!enableServerSync.value) {
+        ElMessage.warning('未启用服务器同步功能')
+        return false
+      }
+
+      const data: ViewStorage = {
+        version: STORAGE_VERSION,
+        horizontal: views.value,
+        activeView: {
+          horizontalId: activeViewId.value
+        }
+      }
+
+      await syncToServer(data)
+      ElMessage.success('同步到服务器成功')
+      return true
+    } catch (error) {
+      console.error('同步到服务器失败:', error)
+      ElMessage.error('同步到服务器失败')
+      return false
     }
   }
 
@@ -525,6 +619,11 @@ export function useViewManagement(options: UseViewManagementOptions = {}) {
     activeViewId,
     activeView,
     loading,
+    // 同步状态
+    isSyncing,
+    lastSyncTime,
+    enableServerSync,
+    syncMode,
 
     // 方法
     createView,
@@ -537,6 +636,7 @@ export function useViewManagement(options: UseViewManagementOptions = {}) {
     exportViews,
     importViews,
     loadViews,
-    saveViews
+    saveViews,
+    manualSyncToServer
   }
 }
