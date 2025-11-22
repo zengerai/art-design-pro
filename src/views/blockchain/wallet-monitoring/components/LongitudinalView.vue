@@ -1,5 +1,9 @@
 <template>
-  <aside :class="['longitudinal-view', { 'is-collapsed': collapsed }]">
+  <aside
+    ref="asideRef"
+    :class="['longitudinal-view', { 'is-collapsed': collapsed }]"
+    :style="{ width: collapsed ? '60px' : `${currentWidth}px` }"
+  >
     <!-- 顶部折叠按钮 -->
     <div class="collapse-toggle" @click="handleToggleCollapse">
       <ElIcon>
@@ -81,11 +85,16 @@
         </ElCollapseTransition>
       </div>
     </ElScrollbar>
+
+    <!-- 拖动调整宽度的手柄 -->
+    <div v-if="!collapsed" class="resize-handle" @mousedown="handleResizeStart">
+      <div class="resize-handle-line" />
+    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue'
+  import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
   import {
     ElIcon,
     ElSelect,
@@ -134,6 +143,20 @@
   }
 
   const emit = defineEmits<Emits>()
+
+  // 组件引用
+  const asideRef = ref<HTMLElement>()
+
+  // 拖动调整宽度相关
+  const STORAGE_KEY = 'longitudinal_view_width'
+  const MIN_WIDTH = 150 // 最小宽度
+  const MAX_WIDTH = 480 // 最大宽度
+  const DEFAULT_WIDTH = 180 // 默认宽度
+
+  const currentWidth = ref(DEFAULT_WIDTH)
+  const isResizing = ref(false)
+  const startX = ref(0)
+  const startWidth = ref(0)
 
   // 当前分组字段（双向绑定）
   const currentGroupField = ref(props.groupField)
@@ -203,6 +226,93 @@
   function handleToggleGroup(groupKey: string): void {
     emit('toggle-group', groupKey)
   }
+
+  /**
+   * 开始拖动调整宽度
+   */
+  function handleResizeStart(e: MouseEvent): void {
+    e.preventDefault()
+    isResizing.value = true
+    startX.value = e.clientX
+    startWidth.value = currentWidth.value
+
+    document.addEventListener('mousemove', handleResizeMove)
+    document.addEventListener('mouseup', handleResizeEnd)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }
+
+  /**
+   * 拖动过程中调整宽度
+   */
+  function handleResizeMove(e: MouseEvent): void {
+    if (!isResizing.value) return
+
+    const deltaX = e.clientX - startX.value
+    const newWidth = startWidth.value + deltaX
+
+    // 限制宽度范围
+    if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+      currentWidth.value = newWidth
+    }
+  }
+
+  /**
+   * 结束拖动调整宽度
+   */
+  function handleResizeEnd(): void {
+    if (!isResizing.value) return
+
+    isResizing.value = false
+    document.removeEventListener('mousemove', handleResizeMove)
+    document.removeEventListener('mouseup', handleResizeEnd)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+
+    // 保存宽度到 localStorage
+    saveWidth()
+  }
+
+  /**
+   * 保存宽度到 localStorage
+   */
+  function saveWidth(): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(currentWidth.value))
+    } catch (e) {
+      console.warn('保存纵向视图宽度失败', e)
+    }
+  }
+
+  /**
+   * 从 localStorage 加载宽度
+   */
+  function loadWidth(): void {
+    try {
+      const savedWidth = localStorage.getItem(STORAGE_KEY)
+      if (savedWidth) {
+        const width = Number(savedWidth)
+        if (width >= MIN_WIDTH && width <= MAX_WIDTH) {
+          currentWidth.value = width
+        }
+      }
+    } catch (e) {
+      console.warn('加载纵向视图宽度失败', e)
+    }
+  }
+
+  // 组件挂载时加载保存的宽度
+  onMounted(() => {
+    loadWidth()
+  })
+
+  // 组件卸载时清理事件监听
+  onBeforeUnmount(() => {
+    document.removeEventListener('mousemove', handleResizeMove)
+    document.removeEventListener('mouseup', handleResizeEnd)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  })
 </script>
 
 <style lang="scss" scoped>
@@ -210,12 +320,11 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 240px;
     height: 100vh;
     overflow: hidden;
     background-color: var(--el-bg-color);
     border-right: 1px solid var(--el-border-color-lighter);
-    transition: width 0.3s ease-in-out;
+    transition: none; // 移除宽度过渡，避免拖动时卡顿
 
     &.is-collapsed {
       width: 60px;
@@ -389,6 +498,38 @@
     .fade-enter-from,
     .fade-leave-to {
       opacity: 0;
+    }
+
+    // 拖动调整宽度的手柄
+    .resize-handle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      width: 8px;
+      cursor: col-resize;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: var(--el-color-primary-light-8);
+
+        .resize-handle-line {
+          background-color: var(--el-color-primary);
+        }
+      }
+
+      .resize-handle-line {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 2px;
+        height: 40px;
+        background-color: var(--el-border-color);
+        border-radius: 1px;
+        transition: background-color 0.2s ease;
+        transform: translate(-50%, -50%);
+      }
     }
   }
 
