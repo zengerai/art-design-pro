@@ -8,8 +8,6 @@ import userRoutes from './routes/user.routes.js'
 import roleRoutes from './routes/role.routes.js'
 import menuRoutes from './routes/menu.routes.js'
 import walletRoutes from './routes/wallet.routes.js'
-import fieldMetadataRoutes from './routes/fieldMetadata.routes.js'
-import enumValuesRoutes from './routes/enumValues.routes.js'
 import operationLogRoutes from './routes/operationLog.routes.js'
 import { errorHandler } from './middleware/error.middleware.js'
 
@@ -43,8 +41,6 @@ app.use('/api/user', userRoutes)
 app.use('/api/role', roleRoutes)
 app.use('/api/menus', menuRoutes)
 app.use('/api/wallet', walletRoutes)
-app.use('/api/field-metadata', fieldMetadataRoutes)
-app.use('/api/enum-values', enumValuesRoutes)
 app.use('/api/operation-log', operationLogRoutes)
 
 // 健康检查

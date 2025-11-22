@@ -59,17 +59,6 @@ export const systemRoutes: AppRouteRecord = {
           { title: '删除', authMark: 'delete' }
         ]
       }
-    },
-    {
-      path: 'field-config',
-      name: 'FieldConfig',
-      component: '/system/field-config',
-      meta: {
-        title: 'menus.system.fieldConfig',
-        icon: 'ri:settings-3-line',
-        keepAlive: true,
-        roles: ['R_SUPER', 'R_ADMIN']
-      }
     }
   ]
 }

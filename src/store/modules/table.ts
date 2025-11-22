@@ -37,8 +37,8 @@ export const useTableStore = defineStore(
     const tableSize = ref(TableSizeEnum.DEFAULT)
     // 斑马纹
     const isZebra = ref(false)
-    // 边框
-    const isBorder = ref(false)
+    // 边框（默认显示）
+    const isBorder = ref(true)
     // 表头背景
     const isHeaderBackground = ref(false)
 

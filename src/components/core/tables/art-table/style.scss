@@ -7,6 +7,28 @@
     margin-top: 10px;
   }
 
+  // 禁止单元格自动换行，超出显示省略号
+  :deep(.el-table__body-wrapper) {
+    .el-table__cell {
+      .cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  // 表头单元格也禁止换行
+  :deep(.el-table__header-wrapper) {
+    .el-table__cell {
+      .cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
   :deep(.el-loading-mask) {
     z-index: 100;
     background-color: var(--default-box-color) !important;

@@ -1,6 +1,6 @@
 <template>
-  <div class="wallet-monitoring-page art-full-height">
-    <ElCard class="art-table-card" shadow="never">
+  <div class="art-full-height">
+    <ElCard class="art-table-card" shadow="never" :style="{ 'margin-top': '0' }">
       <!-- 表格头部 -->
       <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
         <template #left>
@@ -79,7 +79,7 @@
             @save="(value) => handleCellSave(row, 'ownership', value)"
           >
             <template #display="{ value }">
-              <div class="flex flex-wrap gap-1">
+              <div class="flex gap-1" style="overflow: hidden">
                 <ElTag v-for="tag in value" :key="tag" size="small" type="primary">{{ tag }}</ElTag>
                 <span v-if="!value || value.length === 0" class="text-gray-400">-</span>
               </div>
@@ -121,7 +121,7 @@
             @save="(value) => handleCellSave(row, 'mainChains', value)"
           >
             <template #display="{ value }">
-              <div class="flex flex-wrap gap-1">
+              <div class="flex gap-1" style="overflow: hidden">
                 <ElTag v-for="chain in value" :key="chain" size="small" type="success">{{
                   chain
                 }}</ElTag>
@@ -154,7 +154,7 @@
             @save="(value) => handleCellSave(row, 'activityTags', value)"
           >
             <template #display="{ value }">
-              <div class="flex flex-wrap gap-1">
+              <div class="flex gap-1" style="overflow: hidden">
                 <ElTag v-for="tag in value" :key="tag" size="small" type="warning">{{ tag }}</ElTag>
                 <span v-if="!value || value.length === 0" class="text-gray-400">-</span>
               </div>
@@ -172,7 +172,7 @@
             @save="(value) => handleCellSave(row, 'categoryTags', value)"
           >
             <template #display="{ value }">
-              <div class="flex flex-wrap gap-1">
+              <div class="flex gap-1" style="overflow: hidden">
                 <ElTag v-for="tag in value" :key="tag" size="small" type="info">{{ tag }}</ElTag>
                 <span v-if="!value || value.length === 0" class="text-gray-400">-</span>
               </div>
@@ -190,7 +190,7 @@
             @save="(value) => handleCellSave(row, 'status', value)"
           >
             <template #display="{ value }">
-              <div class="flex flex-wrap gap-1">
+              <div class="flex gap-1" style="overflow: hidden">
                 <ElTag v-for="tag in value" :key="tag" size="small">{{ tag }}</ElTag>
                 <span v-if="!value || value.length === 0" class="text-gray-400">-</span>
               </div>
@@ -208,7 +208,7 @@
             @save="(value) => handleCellSave(row, 'alertMark', value)"
           >
             <template #display="{ value }">
-              <div class="flex flex-wrap gap-1">
+              <div class="flex gap-1" style="overflow: hidden">
                 <ElTag v-for="tag in value" :key="tag" size="small" type="danger">{{ tag }}</ElTag>
                 <span v-if="!value || value.length === 0" class="text-gray-400">-</span>
               </div>
