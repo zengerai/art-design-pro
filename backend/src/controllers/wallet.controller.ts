@@ -12,7 +12,21 @@ import { recordOperationLog } from './operationLog.controller'
  */
 export const getWalletList = async (req: Request, res: Response) => {
   try {
-    const { offset = 0, limit = 50, filterCondition = {}, sortRules = [], ...restParams } = req.body
+    const {
+      current = 1,
+      size = 50,
+      offset: deprecatedOffset,
+      limit: deprecatedLimit,
+      filterCondition = {},
+      sortRules = [],
+      ...restParams
+    } = req.body
+
+    // 转换分页参数：支持两种方式
+    // 1. current + size (推荐，前端默认使用)
+    // 2. offset + limit (已废弃，保留向后兼容)
+    const offset = deprecatedOffset !== undefined ? deprecatedOffset : (current - 1) * size
+    const limit = deprecatedLimit !== undefined ? deprecatedLimit : size
 
     // 兼容两种参数格式：扁平结构和嵌套结构
     // 如果filterCondition为空对象，则从restParams中提取筛选条件
@@ -23,6 +37,12 @@ export const getWalletList = async (req: Request, res: Response) => {
     const params: any[] = []
 
     // 处理筛选条件
+    // 钱包地址模糊搜索
+    if (filter.walletAddress && typeof filter.walletAddress === 'string') {
+      conditions.push('walletAddress LIKE ?')
+      params.push(`%${filter.walletAddress}%`)
+    }
+
     if (filter.ownership && Array.isArray(filter.ownership)) {
       filter.ownership.forEach((value: string) => {
         conditions.push('JSON_CONTAINS(ownership, ?)')
@@ -44,7 +64,28 @@ export const getWalletList = async (req: Request, res: Response) => {
       })
     }
 
+    // 处理日期范围筛选
+    if (filter.startTime) {
+      conditions.push('lastQueryTime >= ?')
+      params.push(filter.startTime)
+    }
+
+    if (filter.endTime) {
+      conditions.push('lastQueryTime <= ?')
+      params.push(filter.endTime)
+    }
+
     // 处理数值范围筛选
+    if (filter.minValue !== undefined && filter.minValue !== null) {
+      conditions.push('totalValue >= ?')
+      params.push(filter.minValue)
+    }
+
+    if (filter.maxValue !== undefined && filter.maxValue !== null) {
+      conditions.push('totalValue <= ?')
+      params.push(filter.maxValue)
+    }
+
     if (filter.totalValueMin !== undefined && filter.totalValueMin !== null) {
       conditions.push('totalValue >= ?')
       params.push(filter.totalValueMin)

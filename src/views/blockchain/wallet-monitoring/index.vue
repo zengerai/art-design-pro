@@ -1,8 +1,24 @@
 <template>
   <div class="art-full-height">
+    <!-- 搜索区域 -->
+    <WalletSearch
+      v-show="showSearchBar"
+      v-model="searchForm"
+      :ownership-options="ownershipOptions"
+      :chain-options="chainOptions"
+      :status-options="statusOptions"
+      @search="handleSearch"
+      @reset="resetSearchParams"
+    ></WalletSearch>
+
     <ElCard class="art-table-card" shadow="never" :style="{ 'margin-top': '0' }">
       <!-- 表格头部 -->
-      <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
+      <ArtTableHeader
+        v-model:columns="columnChecks"
+        v-model:showSearchBar="showSearchBar"
+        :loading="loading"
+        @refresh="refreshData"
+      >
         <template #left>
           <ElSpace wrap>
             <ElButton type="primary" :icon="Plus" @click="handleAdd">新增钱包</ElButton>
@@ -656,6 +672,7 @@
   import EditableCell from '@/components/editable-cell/EditableCell.vue'
   import ViewTabs from './components/ViewTabs.vue'
   import ViewDialog from './components/ViewDialog.vue'
+  import WalletSearch from './components/WalletSearch.vue'
   import { useTable } from '@/hooks/core/useTable'
   import { useViewManagement } from '@/hooks/core/useViewManagement'
   import {
@@ -738,6 +755,19 @@
     remark: ''
   })
 
+  // 搜索表单状态
+  const searchForm = ref({
+    walletAddress: undefined,
+    ownership: undefined,
+    mainChains: undefined,
+    status: undefined,
+    totalValueRange: undefined,
+    daterange: undefined
+  })
+
+  // 控制搜索栏显隐
+  const showSearchBar = ref(false)
+
   // 枚举选项
   const ownershipOptions = ref(['个人', '团队', '外部', '合作方'])
   const chainOptions = ref(['ETH', 'ARB', 'OP', 'BASE', 'ZKSYNC', 'POLYGON', 'BSC', 'AVAX'])
@@ -783,11 +813,6 @@
   } = useTable({
     core: {
       apiFn: fetchWalletList,
-      // 自定义分页字段映射，将current/size映射为offset/limit
-      paginationKey: {
-        current: 'offset',
-        size: 'limit'
-      },
       columnsFactory: () => [
         { type: 'selection', width: 55, fixed: 'left' },
         { type: 'index', width: 60, label: '序号' },
@@ -885,9 +910,9 @@
     // 获取筛选条件
     const filter = view.filterCondition
 
-    // 清除之前的筛选条件（保留offset和limit）
+    // 清除之前的筛选条件（保留current和size）
     const searchParamsObj = searchParams as Record<string, any>
-    const paginationKeys = ['offset', 'limit', 'current', 'size']
+    const paginationKeys = ['current', 'size']
     Object.keys(searchParamsObj).forEach((key) => {
       if (!paginationKeys.includes(key)) {
         delete searchParamsObj[key]
@@ -1416,6 +1441,65 @@
       console.error('导出失败:', error)
       ElMessage.error('导出失败')
     }
+  }
+
+  // 搜索处理函数
+  const handleSearch = (params: Record<string, any>) => {
+    const { daterange, totalValueRange, ...filtersParams } = params
+
+    // 处理日期范围
+    const [startTime, endTime] = Array.isArray(daterange) ? daterange : [null, null]
+
+    // 处理价值范围
+    let minValue, maxValue
+    if (totalValueRange && typeof totalValueRange === 'string') {
+      const parts = totalValueRange.split('-').map((v) => v.trim())
+      minValue = parts[0] ? parseFloat(parts[0]) : undefined
+      maxValue = parts[1] ? parseFloat(parts[1]) : undefined
+    }
+
+    // 更新搜索参数
+    Object.assign(searchParams, {
+      ...filtersParams,
+      startTime,
+      endTime,
+      minValue,
+      maxValue
+    })
+
+    // 重置分页到第一页
+    pagination.current = 1
+
+    // 执行搜索
+    refreshData()
+  }
+
+  // 重置搜索参数
+  const resetSearchParams = () => {
+    // 清空搜索表单
+    searchForm.value = {
+      walletAddress: undefined,
+      ownership: undefined,
+      mainChains: undefined,
+      status: undefined,
+      totalValueRange: undefined,
+      daterange: undefined
+    }
+
+    // 清空搜索参数（保留分页参数）
+    const searchParamsObj = searchParams as Record<string, any>
+    const paginationKeys = ['current', 'size']
+    Object.keys(searchParamsObj).forEach((key) => {
+      if (!paginationKeys.includes(key)) {
+        delete searchParamsObj[key]
+      }
+    })
+
+    // 重置分页到第一页
+    pagination.current = 1
+
+    // 刷新数据
+    refreshData()
   }
 
   // 页面初始化：应用当前激活视图的筛选条件
