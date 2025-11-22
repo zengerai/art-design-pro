@@ -201,6 +201,7 @@
 
 <style scoped lang="scss">
   .view-tabs-container {
+    margin-top: 16px;
     margin-bottom: 16px;
 
     :deep(.el-tabs__header) {
